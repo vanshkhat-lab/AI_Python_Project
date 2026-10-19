@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Compare resume evidence with job requirements in a clear, explainable report.">
+  <title>RoleFit — Resume match analyzer</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('index') }}"><span class="brand-mark">R</span> rolefit</a>
+    <span class="top-note">A clearer way to tailor your next application</span>
+  </header>
+
+  <main class="page-shell">
+    <section class="hero">
+      <div class="eyebrow"><span class="eyebrow-dot"></span> RESUME MATCH ANALYZER</div>
+      <h1>Make your experience<br><span class="muted-heading">visible to the role.</span></h1>
+      <p class="hero-copy">Compare what your resume says with what a role asks for. Get a transparent breakdown of relevant skills, experience, and areas to strengthen.</p>
+      <div class="trust-line"><span aria-hidden="true">✳</span> Private by design · No employability promises · Your claims stay yours</div>
+    </section>
+
+    <section class="workspace-grid">
+      <div class="form-card">
+        <div class="card-heading">
+          <div class="step-number">01</div>
+          <div><h2>Bring the two sides together</h2><p>Upload a resume, then paste or attach the job description.</p></div>
+        </div>
+        {% if error %}<div class="alert" role="alert">{{ error }}</div>{% endif %}
+        <form action="{{ url_for('analyze') }}" method="post" enctype="multipart/form-data">
+          <label class="field-label" for="resume_file">Your resume <span class="required">Required</span></label>
+          <label class="upload-zone" for="resume_file">
+            <span class="upload-icon" aria-hidden="true">↑</span>
+            <span><strong id="resume-file-name" aria-live="polite">Choose a resume file</strong><small>PDF or DOCX · text-based files · up to 5 MB</small></span>
+            <input id="resume_file" name="resume_file" type="file" accept=".pdf,.docx" required>
+          </label>
+
+          <div class="field-row">
+            <label class="field-label" for="job_description">Job description <span class="optional">Paste or upload</span></label>
+            <label class="compact-upload" for="job_file"><span aria-hidden="true">＋</span> <span id="job-file-name" aria-live="polite">Attach PDF, DOCX, or TXT</span><input id="job_file" name="job_file" type="file" accept=".pdf,.docx,.txt"></label>
+          </div>
+          <textarea id="job_description" name="job_description" rows="9" placeholder="Paste the role's responsibilities, requirements, and qualifications here. If you attach a job description file, its text takes precedence." aria-describedby="jd-help"></textarea>
+          <p class="field-help" id="jd-help">A file takes precedence over pasted text. We only score requirements we can detect.</p>
+
+          <button class="analyze-button" type="submit">Analyze my match <span aria-hidden="true">↗</span></button>
+        </form>
+      </div>
+
+      <aside class="method-card">
+        <div class="method-kicker">HOW IT WORKS</div>
+        <h2>A score you<br>can understand.</h2>
+        <p>We compare the text you provide using explicit, weighted criteria—not a black-box employability prediction.</p>
+        <div class="weight-list">
+          <div><span>Skills evidence</span><strong>70%</strong><i><b style="width:70%"></b></i></div>
+          <div><span>Experience stated</span><strong>20%</strong><i><b style="width:20%"></b></i></div>
+          <div><span>Qualifications</span><strong>10%</strong><i><b style="width:10%"></b></i></div>
+        </div>
+        <div class="method-foot"><span class="info-icon">i</span><span>Weights are adjusted when the job description doesn't include detectable criteria for a category. Dates aren't used to guess your years of experience.</span></div>
+      </aside>
+    </section>
+
+    {% if report %}
+    <section class="results" aria-live="polite">
+      <div class="results-heading">
+        <div>
+          <div class="eyebrow"><span class="eyebrow-dot"></span> YOUR ANALYSIS</div>
+          <h2>Here’s where you stand.</h2>
+          <p>Use this as a guide to tailor your resume—not as a prediction of hiring outcomes.</p>
+        </div>
+        <form action="{{ url_for('download_report') }}" method="post">
+          <input type="hidden" name="report_json" value="{{ report|tojson|forceescape }}">
+          <button class="download-button" type="submit"><span aria-hidden="true">↓</span> Download report</button>
+        </form>
+      </div>
+      <div class="result-grid">
+        <article class="score-card">
+          <div class="score-label">DOCUMENT MATCH SCORE <span class="info-icon" title="{{ report.scoring_note }}">i</span></div>
+          <div class="score-number">{{ report.score }}<small>/100</small></div>
+          <div class="score-track"><span style="width: {{ report.score }}%"></span></div>
+          <p>Based on visible evidence in these documents. Not a guarantee of employability.</p>
+        </article>
+        <article class="breakdown-card">
+          <h3>Scoring breakdown</h3>
+          {% if report.criteria %}
+            {% for criterion in report.criteria %}
+            <div class="criterion">
+              <div class="criterion-top"><strong>{{ criterion.name }}</strong><span>{{ "%.1f"|format(criterion.points) }} pts</span></div>
+              <div class="criterion-track"><span style="width: {{ (criterion.coverage * 100)|round }}%"></span></div>
+              <p>{{ criterion.detail }} · {{ (criterion.effective_weight * 100)|round|int }}% effective weight</p>
+            </div>
+            {% endfor %}
+          {% else %}
+            <p class="empty-note">No supported criteria were detected in the job description, so no meaningful score could be calculated.</p>
+          {% endif %}
+        </article>
+      </div>
+      <p class="scoring-note">{{ report.scoring_note }}</p>
+
+      <div class="report-grid">
+        <article class="report-card">
+          <div class="report-card-title"><span class="status-dot green"></span><h3>Evidence found</h3><span class="count">{{ report.matched_skills|length }}</span></div>
+          {% if report.matched_skills %}<div class="tag-list">{% for skill in report.matched_skills %}<span class="tag tag-green">{{ skill }}</span>{% endfor %}</div>{% else %}<p class="empty-note">No clearly evidenced required skills were detected.</p>{% endif %}
+        </article>
+        <article class="report-card">
+          <div class="report-card-title"><span class="status-dot amber"></span><h3>Could use stronger evidence</h3><span class="count">{{ report.partial_skills|length }}</span></div>
+          {% if report.partial_skills %}<div class="tag-list">{% for skill in report.partial_skills %}<span class="tag tag-amber">{{ skill }}</span>{% endfor %}</div>{% else %}<p class="empty-note">No partial-signal skills detected.</p>{% endif %}
+        </article>
+        <article class="report-card">
+          <div class="report-card-title"><span class="status-dot red"></span><h3>Not found in resume text</h3><span class="count">{{ report.missing_skills|length }}</span></div>
+          {% if report.missing_skills %}<div class="tag-list">{% for skill in report.missing_skills %}<span class="tag tag-red">{{ skill }}</span>{% endfor %}</div>{% else %}<p class="empty-note">No missing skills detected from the job description.</p>{% endif %}
+          <p class="card-caveat">Not found doesn't mean you lack the skill—it may simply not be stated in the resume.</p>
+        </article>
+      </div>
+
+      <div class="detail-grid">
+        <article class="detail-card">
+          <div class="section-overline">EXPERIENCE & QUALIFICATIONS</div>
+          <h3>Requirements, side by side</h3>
+          <p>{{ report.experience.summary }}</p>
+          {% if report.required_qualifications %}
+            <div class="qualification-block">
+              <strong>Qualifications in the job description</strong>
+              <div class="tag-list">{% for item in report.matched_qualifications %}<span class="tag tag-green">{{ item }}</span>{% endfor %}{% for item in report.missing_qualifications %}<span class="tag tag-red">{{ item }} · not found</span>{% endfor %}</div>
+            </div>
+          {% endif %}
+        </article>
+        <article class="detail-card">
+          <div class="section-overline">RELEVANT RESUME EVIDENCE</div>
+          <h3>What the analysis picked up</h3>
+          {% if report.relevant_experience %}<ul class="evidence-list">{% for snippet in report.relevant_experience %}<li>{{ snippet }}</li>{% endfor %}</ul>{% else %}<p>No clearly relevant experience snippets detected. A clearer job title or more specific bullet points may help.</p>{% endif %}
+        </article>
+      </div>
+
+      <article class="improvement-card">
+        <div class="section-overline">NEXT STEPS</div>
+        <h3>Make your experience easier to see.</h3>
+        <ul class="suggestion-list">{% for suggestion in report.improvements %}<li><span aria-hidden="true">↗</span>{{ suggestion }}</li>{% endfor %}</ul>
+        <p class="ethics-note">Suggestions never add qualifications or experience on your behalf. Only include claims you can honestly support.</p>
+      </article>
+    </section>
+    {% endif %}
+
+    <footer><span>ROLEFIT</span><p>Your documents are analyzed in this app session and are not saved to a database.</p></footer>
+  </main>
+  <script>
+    const resumeInput = document.getElementById("resume_file");
+    const resumeName = document.getElementById("resume-file-name");
+    const jobInput = document.getElementById("job_file");
+    const jobName = document.getElementById("job-file-name");
+    resumeInput.addEventListener("change", () => {
+      resumeName.textContent = resumeInput.files[0]?.name || "Choose a resume file";
+      resumeName.title = resumeInput.files[0]?.name || "";
+    });
+    jobInput.addEventListener("change", () => {
+      jobName.textContent = jobInput.files[0]?.name || "Attach PDF, DOCX, or TXT";
+      jobName.title = jobInput.files[0]?.name || "";
+    });
+  </script>
+</body>
+</html>
