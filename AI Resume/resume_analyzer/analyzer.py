@@ -1,7 +1,34 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
+
+RequirementStatus = Literal[
+    "matched", "partially_supported", "missing", "uncertain"
+]
+RequirementCategory = Literal["skill", "qualification"]
+RequirementPriority = Literal["required", "preferred"]
+
+
+class EvidenceRequirement(TypedDict):
+    name: str
+    category: RequirementCategory
+    status: RequirementStatus
+    evidence: str | None
+    section: str | None
+
+
+class ScoredRequirement(EvidenceRequirement):
+    priority: RequirementPriority
+
+
+class ScoreComponent(TypedDict):
+    name: str
+    weight: float
+    coverage: float
+    detail: str
+    effective_weight: float
+    points: float
 
 SKILL_ALIASES: dict[str, tuple[str, ...]] = {
     "Python": ("python",),
@@ -58,15 +85,52 @@ SKILL_ALIASES: dict[str, tuple[str, ...]] = {
 }
 
 QUALIFICATIONS: dict[str, tuple[str, ...]] = {
-    "Bachelor's degree": ("bachelor's degree", "bachelor’s degree", "bachelor degree"),
-    "Master's degree": ("master's degree", "master’s degree", "master degree"),
+    "Bachelor's degree": (
+        "bachelor's degree",
+        "bachelor’s degree",
+        "bachelor degree",
+        "bachelor of science",
+        "bachelor of engineering",
+        "b.s.",
+        "b.e.",
+        "beng",
+        "b.tech",
+    ),
+    "Master's degree": (
+        "master's degree",
+        "master’s degree",
+        "master degree",
+        "master of science",
+        "master of engineering",
+        "m.s.",
+        "m.e.",
+        "meng",
+        "m.tech",
+    ),
     "PhD": ("ph.d.", "phd", "doctorate"),
-    "Associate degree": ("associate degree",),
+    "Associate degree": ("associate degree", "associate's degree", "associate’s degree"),
     "Diploma": ("diploma",),
     "Professional certification": ("certification",),
     "PMP": ("pmp", "project management professional"),
     "CPA": ("cpa", "certified public accountant"),
 }
+_DEGREE_FIELD_PATTERN = re.compile(
+    r"\b(?P<level>"
+    r"bachelor(?:['’]s)?|bachelors|master(?:['’]s)?|masters|"
+    r"associate(?:['’]s)?|"
+    r"b\.?\s*e\.?|b\.?\s*tech\.?|b\.?\s*eng\.?|b\.?\s*s\.?|"
+    r"m\.?\s*e\.?|m\.?\s*tech\.?|m\.?\s*eng\.?|m\.?\s*s\.?"
+    r")"
+    r"(?:\s+of\s+(?:science|engineering|arts|technology))?"
+    r"(?:\s+degree)?"
+    r"(?:\s+(?:in|with\s+(?:a\s+)?major\s+in|majoring\s+in)\s+|"
+    r"\s*[-,:]\s*|\s*\(\s*|\s+)"
+    r"(?P<field>(?!(?:is|degree|required|preferred|desired|mandatory|essential|optional)\b)"
+    r"[a-z][a-z0-9&/ -]*?)"
+    r"(?=\s+(?:is\s+)?(?:required|preferred|desired|mandatory|essential)|"
+    r"\s+or\s+(?:a\s+)?(?:related|equivalent)|[,.;:\n)]|$)",
+    re.IGNORECASE,
+)
 
 PARTIAL_EVIDENCE = (
     "familiar with",
@@ -76,6 +140,21 @@ PARTIAL_EVIDENCE = (
     "beginner",
     "basic knowledge",
     "interested in",
+)
+SKILL_USE_CONTEXT = re.compile(
+    r"\b(?:"
+    r"build|built|building|develop(?:ed|ing)?|implement(?:ed|ing)?|"
+    r"design(?:ed|ing)?|maintain(?:ed|ing)?|creat(?:ed|ing)?|"
+    r"use|used|using|writ(?:e|es|ten|ing)|program(?:med|ming)?|"
+    r"deploy(?:ed|ing)?|test(?:ed|ing)?|analyz(?:e|ed|ing)|"
+    r"automat(?:e|ed|ing)|optimiz(?:e|ed|ing)|integrat(?:e|ed|ing)|"
+    r"configur(?:e|ed|ing)|manag(?:e|ed|ing)|support(?:ed|ing)?|"
+    r"deliver(?:ed|ing)?|lead|led|leading|appl(?:y|ied|ying)|"
+    r"leverag(?:e|ed|ing)|utiliz(?:e|ed|ing)|quer(?:y|ied|ying)|"
+    r"process(?:ed|ing)?|migrat(?:e|ed|ing)|architect(?:ed|ing)?|"
+    r"troubleshoot(?:ed|ing)?|evaluat(?:e|ed|ing)|orchestrat(?:e|ed|ing)"
+    r")\b",
+    re.IGNORECASE,
 )
 NEGATIVE_SKILL_PREFIX = re.compile(
     r"\b(?:"
@@ -106,7 +185,7 @@ YEAR_PATTERNS = (
         re.IGNORECASE,
     ),
 )
-SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
+SENTENCE_SPLIT = re.compile(r"(?<=[.!?;])\s+|\n+")
 PREFERRED_MARKER = re.compile(
     r"\b(preferred|preferably|desired|nice[\s-]+to[\s-]+have|bonus|desirable|"
     r"a\s+plus|beneficial|would\s+be\s+an?\s+advantage)\b",
@@ -121,7 +200,7 @@ REQUIRED_MARKER = re.compile(
     r"need(?:ed)?|shall\s+have)\b",
     re.IGNORECASE,
 )
-RESUME_SECTIONS = {
+RESUME_SECTIONS: dict[str, tuple[str, ...]] = {
     "experience": (
         "experience",
         "employment",
@@ -179,29 +258,82 @@ def _required_year_values(text: str) -> list[float]:
 
 
 def _qualifications(text: str) -> list[str]:
-    return [
+    qualifications = [
         name
         for name, aliases in QUALIFICATIONS.items()
         if _contains_term(text, (name, *aliases))
     ]
+    degree_fields: dict[str, list[str]] = {}
+    for match in _DEGREE_FIELD_PATTERN.finditer(text):
+        degree_level = match.group("level").lower()
+        qualification = (
+            "Bachelor's degree"
+            if degree_level.startswith("bachelor") or degree_level.startswith("b.")
+            else "Associate degree"
+            if degree_level.startswith("associate")
+            else "Master's degree"
+        )
+        field = " ".join(match.group("field").split()).strip(" -")
+        if field:
+            degree_fields.setdefault(qualification, []).append(field)
+
+    for qualification, fields in degree_fields.items():
+        if qualification in qualifications:
+            qualifications.remove(qualification)
+        qualifications.extend(
+            f"{qualification} in {field}" for field in dict.fromkeys(fields)
+        )
+    return qualifications
 
 
-def _skill_evidence(text: str, skill: str) -> tuple[bool, bool]:
+def qualification_names(text: str) -> list[str]:
+    return _qualifications(text)
+
+
+def qualification_terms(qualification: str) -> tuple[str, ...]:
+    base, separator, field = qualification.partition(" in ")
+    terms = (base, *QUALIFICATIONS.get(base, ()))
+    return (*terms, field) if separator else terms
+
+
+def _skill_evidence(text: str, skill: str) -> tuple[bool, bool, bool]:
     terms = (skill, *SKILL_ALIASES[skill])
+    found = False
     has_partial_evidence = False
+    has_contextual_evidence = False
     for sentence in SENTENCE_SPLIT.split(text):
         for term in terms:
             for match in _term_pattern(term).finditer(sentence):
                 prefix = sentence[max(0, match.start() - 100) : match.start()]
                 if NEGATIVE_SKILL_PREFIX.search(prefix):
                     continue
+                found = True
                 context = sentence[
                     max(0, match.start() - 80) : min(len(sentence), match.end() + 40)
                 ]
                 if not _contains_term(context, PARTIAL_EVIDENCE):
-                    return True, False
-                has_partial_evidence = True
-    return (True, True) if has_partial_evidence else (False, False)
+                    if any(
+                        len(
+                            re.findall(
+                                r"\b[\w+#./-]+\b",
+                                sentence[
+                                    min(action.end(), match.end()) : max(
+                                        action.start(), match.start()
+                                    )
+                                ],
+                            )
+                        )
+                        <= 8
+                        for action in SKILL_USE_CONTEXT.finditer(sentence)
+                    ):
+                        has_contextual_evidence = True
+                else:
+                    has_partial_evidence = True
+    return (
+        found,
+        has_partial_evidence and not has_contextual_evidence,
+        has_contextual_evidence,
+    )
 
 
 def _evidence_snippets(resume_text: str, required_skills: list[str]) -> list[str]:
@@ -211,8 +343,9 @@ def _evidence_snippets(resume_text: str, required_skills: list[str]) -> list[str
         if len(cleaned) < 20:
             continue
         contains_skill = any(
-            _skill_evidence(cleaned, skill)[0]
+            found and (partial or contextual)
             for skill in required_skills
+            for found, partial, contextual in [_skill_evidence(cleaned, skill)]
         )
         contains_experience = bool(_year_values(cleaned)) or _contains_term(
             cleaned, ("engineer", "developer", "manager", "analyst")
@@ -291,7 +424,9 @@ def _resume_sentences(resume_text: str) -> list[tuple[str, str]]:
             re.IGNORECASE,
         )
         if inline_heading:
-            current_section = _section_for_heading(inline_heading.group(1))
+            inline_section = _section_for_heading(inline_heading.group(1))
+            if inline_section is not None:
+                current_section = inline_section
             cleaned_line = inline_heading.group(2)
         heading_section = _section_for_heading(cleaned_line)
         if heading_section:
@@ -312,19 +447,23 @@ def _resume_sentences(resume_text: str) -> list[tuple[str, str]]:
 
 def _skill_requirement(
     skill: str, resume_sentences: list[tuple[str, str]]
-) -> dict[str, Any]:
-    best: dict[str, Any] | None = None
-    rank = {"uncertain": 1, "partially_supported": 2, "matched": 3}
+) -> EvidenceRequirement:
+    best: EvidenceRequirement | None = None
+    rank: dict[RequirementStatus, int] = {
+        "uncertain": 1,
+        "partially_supported": 2,
+        "matched": 3,
+    }
     for sentence, section in resume_sentences:
-        found, partial = _skill_evidence(sentence, skill)
+        found, partial, contextual = _skill_evidence(sentence, skill)
         if found:
             if partial:
-                status = "partially_supported"
-            elif section == "skills":
-                status = "uncertain"
-            else:
+                status: RequirementStatus = "partially_supported"
+            elif contextual:
                 status = "matched"
-            candidate = {
+            else:
+                status = "uncertain"
+            candidate: EvidenceRequirement = {
                 "name": skill,
                 "category": "skill",
                 "status": status,
@@ -348,13 +487,20 @@ def _skill_requirement(
 
 def _qualification_requirement(
     qualification: str, resume_sentences: list[tuple[str, str]]
-) -> dict[str, Any]:
-    terms = (qualification, *QUALIFICATIONS[qualification])
-    best: dict[str, Any] | None = None
+) -> EvidenceRequirement:
+    base, separator, field = qualification.partition(" in ")
+    degree_terms = (base, *QUALIFICATIONS.get(base, ()))
+    best: EvidenceRequirement | None = None
     for sentence, section in resume_sentences:
-        if _contains_term(sentence, terms):
-            status = "matched" if section in {"education", "certifications"} else "uncertain"
-            candidate = {
+        has_qualification = (
+            _contains_term(sentence, degree_terms)
+            and (not separator or _contains_term(sentence, (field,)))
+        )
+        if has_qualification:
+            status: RequirementStatus = (
+                "matched" if section in {"education", "certifications"} else "uncertain"
+            )
+            candidate: EvidenceRequirement = {
                 "name": qualification,
                 "category": "qualification",
                 "status": status,
@@ -384,8 +530,8 @@ def _score(
     candidate_years: float | None,
     matched_qualifications: list[str],
     required_qualifications: list[str],
-) -> tuple[int, list[dict[str, Any]]]:
-    components: list[dict[str, Any]] = []
+) -> tuple[int, list[ScoreComponent]]:
+    components: list[ScoreComponent] = []
     if matched_skills or partial_skills or missing_skills:
         skill_coverage = (
             len(matched_skills) + 0.5 * len(partial_skills)
@@ -395,6 +541,8 @@ def _score(
                 "name": "Skills",
                 "weight": COMPONENT_WEIGHTS["Skills"],
                 "coverage": skill_coverage,
+                "effective_weight": 0.0,
+                "points": 0.0,
                 "detail": (
                     f"{len(matched_skills)} evidenced, {len(partial_skills)} "
                     f"partial, {len(missing_skills)} not found"
@@ -412,6 +560,8 @@ def _score(
                 "name": "Experience",
                 "weight": COMPONENT_WEIGHTS["Experience"],
                 "coverage": experience_coverage,
+                "effective_weight": 0.0,
+                "points": 0.0,
                 "detail": (
                     f"{candidate_years:g} stated years vs. {required_years:g} required"
                     if candidate_years is not None
@@ -428,6 +578,8 @@ def _score(
                 "name": "Qualifications",
                 "weight": COMPONENT_WEIGHTS["Qualifications"],
                 "coverage": qualification_coverage,
+                "effective_weight": 0.0,
+                "points": 0.0,
                 "detail": (
                     f"{len(matched_qualifications)} of "
                     f"{len(required_qualifications)} qualifications found"
@@ -448,7 +600,7 @@ def _score(
 
 
 def _plain_text(report: dict[str, Any]) -> str:
-    lines = [
+    lines: list[str] = [
         "RESUME MATCH ANALYSIS",
         f"Transparent match score: {report['score']} / 100",
         "This score compares detectable evidence in the documents; it is not a "
@@ -517,7 +669,7 @@ def analyze_resume(resume_text: str, job_description: str) -> dict[str, Any]:
         skill for skill in detected_skills if skill not in preferred_skills
     ]
     resume_sentences = _resume_sentences(resume_text)
-    skill_requirements = [
+    skill_requirements: list[ScoredRequirement] = [
         {
             **_skill_requirement(skill, resume_sentences),
             "priority": "preferred" if skill in preferred_skills else "required",
@@ -549,12 +701,12 @@ def analyze_resume(resume_text: str, job_description: str) -> dict[str, Any]:
     candidate_year_values = _year_values(resume_text)
     required_years = max(required_year_values) if required_year_values else None
     candidate_years = max(candidate_year_values) if candidate_year_values else None
-    detected_qualifications = _qualifications(job_description)
+    detected_qualifications = qualification_names(job_description)
     preferred_qualifications = [
         qualification
         for qualification in detected_qualifications
         if _priority_for_requirement(
-            job_description, (qualification, *QUALIFICATIONS[qualification])
+            job_description, qualification_terms(qualification)
         )
         == "preferred"
     ]
@@ -563,7 +715,7 @@ def analyze_resume(resume_text: str, job_description: str) -> dict[str, Any]:
         for qualification in detected_qualifications
         if qualification not in preferred_qualifications
     ]
-    qualification_requirements = [
+    qualification_requirements: list[ScoredRequirement] = [
         {
             **_qualification_requirement(qualification, resume_sentences),
             "priority": (
