@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from io import BytesIO
+from typing import Any, Mapping
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,7 +10,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from backend.resumeiq import models  # noqa: F401
 from backend.resumeiq.api import app
 from backend.resumeiq.db import Base, get_db
 
@@ -177,10 +177,15 @@ def test_json_analysis_saves_only_when_requested(client: TestClient):
 def test_core_analysis_survives_optional_ai_provider_failure(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ):
+    def unavailable_recommendations(
+        _resume: str, _report: Mapping[str, Any]
+    ) -> tuple[list[dict[str, object]], str]:
+        return [], "unavailable"
+
     monkeypatch.setenv("OPENAI_API_KEY", "configured-test-key")
     monkeypatch.setattr(
         "backend.resumeiq.api.get_recommendations",
-        lambda _resume, _report: ([], "unavailable"),
+        unavailable_recommendations,
     )
 
     response = client.post(
@@ -192,7 +197,7 @@ def test_core_analysis_survives_optional_ai_provider_failure(
     )
 
     assert response.status_code == 200
-    assert response.json()["score"] == 100
+    assert response.json()["score"] == 50
     assert response.json()["ai_status"] == "unavailable"
     assert any(
         "AI recommendations are unavailable" in warning
@@ -204,8 +209,9 @@ def test_text_analysis_returns_typed_report(client: TestClient):
     response = client.post("/api/analyze/text", json=text_analysis_payload())
 
     assert response.status_code == 200
-    assert response.json()["matched_skills"] == ["Python"]
-    assert response.json()["score"] == 100
+    assert response.json()["matched_skills"] == []
+    assert response.json()["uncertain_skills"] == ["Python"]
+    assert response.json()["score"] == 50
 
 
 def test_missing_and_malformed_analysis_fields_return_json_error(client: TestClient):
