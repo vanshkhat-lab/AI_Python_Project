@@ -43,8 +43,11 @@ For each detected skill, qualification, or stated experience requirement:
 
 This is a text-evidence comparison, not an employability or hiring probability.
 The vocabulary and parser are intentionally finite. They do not infer years of
-experience from employment dates, and a mention in a skills list alone is
-uncertain evidence. Responsibilities are extracted for context but are not
+experience from employment dates. A skill mention without a nearby example of
+using it is uncertain evidence and receives no score credit; concrete actions
+such as building, testing, or deploying with a skill count as contextual
+evidence only when the action is close to that skill mention in the same
+sentence or clause. Responsibilities are extracted for context but are not
 scored as requirements. Detected requirements can be reviewed, but are not
 individually editable in the current UI; edit the job description itself and
 review the refreshed parse before analyzing.
@@ -256,3 +259,4 @@ More details: [docs/troubleshooting.md](./docs/troubleshooting.md).
 Review `.gitignore`; verify that `.env`, the SQLite database, `.venv`, generated
 frontend bundles, and `node_modules` are excluded. Do not add real resumes,
 provider keys, or personal test data. Use only synthetic documents in tests.
+
