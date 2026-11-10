@@ -1,6 +1,7 @@
 import type { AnalysisReport, CustomerFeedback } from "./types";
 
-const API_BASE = "/api";
+const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
+const API_BASE = `${API_ORIGIN}/api`;
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
