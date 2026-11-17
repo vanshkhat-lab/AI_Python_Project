@@ -1,19 +1,39 @@
+import { supabase } from "./supabase";
 import type { AnalysisReport, CustomerFeedback } from "./types";
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
 const API_BASE = `${API_ORIGIN}/api`;
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function request<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const {
+    data: { session },
+    error: authError,
+  } = await supabase.auth.getSession();
+
+  if (authError || !session?.access_token) {
+    throw new Error("Please log in to continue.");
+  }
+
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
       ...(options.headers ?? {}),
+      Authorization: `Bearer ${session.access_token}`,
     },
   });
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
-    const message = payload?.error?.message ?? "The request could not be completed.";
+
+    const message =
+      payload?.error?.message ??
+      (typeof payload?.detail === "string"
+        ? payload.detail
+        : "The request could not be completed.");
+
     throw new Error(message);
   }
 
