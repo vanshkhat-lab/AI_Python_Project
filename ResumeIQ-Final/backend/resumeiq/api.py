@@ -389,7 +389,6 @@ def delete_analysis(analysis_id: str, db: Session = Depends(get_db)):
     db.commit()
     return Response(status_code=204)
 
-
 @router.get("/analyses/{analysis_id}/report")
 def download_analysis_report(analysis_id: str, db: Session = Depends(get_db)):
     record = _get_analysis(analysis_id, db)
