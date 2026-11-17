@@ -24,6 +24,12 @@ from backend.resumeiq.config import (
     MAX_TEXT_LENGTH,
     MAX_UPLOAD_BYTES,
 )
+from backend.resumeiq.credits import (
+    complete_credit,
+    current_user_id,
+    refund_credit,
+    reserve_credit,
+)
 from backend.resumeiq.db import create_tables, get_db
 from backend.resumeiq.models import AnalysisRecord, ClientFeedbackRecord
 from backend.resumeiq.schemas import (
@@ -288,8 +294,34 @@ def _persist_report(report: AnalysisReport, db: Session) -> AnalysisReport:
     )
 
 
+def _charged_report(
+    user_id: str,
+    resume_text: str,
+    job_description: str,
+    generate_ai: bool = False,
+    extraction_warnings: list[str] | None = None,
+) -> AnalysisReport:
+    """Reserve one credit, finalize after a successful report, refund on failure."""
+    transaction_id = reserve_credit(user_id)
+    try:
+        report = _make_report(
+            resume_text, job_description, generate_ai, extraction_warnings
+        )
+        complete_credit(user_id, transaction_id)
+        return report
+    except BaseException:
+        try:
+            refund_credit(user_id, transaction_id)
+        except Exception:
+            logger.exception("Credit refund needs reconciliation; transaction=%s", transaction_id)
+        raise
+
+
 @router.post("/analyze", response_model=AnalysisReport)
-async def analyze(request: Request, db: Session = Depends(get_db)):
+async def analyze(
+    request: Request,
+    user_id: str = Depends(current_user_id),
+):
     content_type = request.headers.get("content-type", "")
     if content_type.startswith("application/json"):
         try:
@@ -298,13 +330,18 @@ async def analyze(request: Request, db: Session = Depends(get_db)):
             raise HTTPException(
                 status_code=422, detail="The analysis request is invalid."
             ) from error
-        report = await asyncio.to_thread(
-            _make_report,
+        if payload.save_analysis:
+            raise HTTPException(
+                status_code=503,
+                detail="Server-side saved analysis is disabled until per-user storage is ready.",
+            )
+        return await asyncio.to_thread(
+            _charged_report,
+            user_id,
             payload.resume_text,
             payload.job_description,
             payload.generate_ai_recommendations,
         )
-        return _persist_report(report, db) if payload.save_analysis else report
 
     if content_type.startswith("multipart/form-data"):
         form = await request.form()
@@ -325,14 +362,19 @@ async def analyze(request: Request, db: Session = Depends(get_db)):
             )
         generate_ai = str(form.get("generate_ai_recommendations", "false")).lower() == "true"
         save_analysis = str(form.get("save_analysis", "false")).lower() == "true"
-        report = await asyncio.to_thread(
-            _make_report,
+        if save_analysis:
+            raise HTTPException(
+                status_code=503,
+                detail="Server-side saved analysis is disabled until per-user storage is ready.",
+            )
+        return await asyncio.to_thread(
+            _charged_report,
+            user_id,
             resume_text,
             job_description,
             generate_ai,
             extraction_warnings,
         )
-        return _persist_report(report, db) if save_analysis else report
 
     raise HTTPException(
         status_code=415,
@@ -341,13 +383,21 @@ async def analyze(request: Request, db: Session = Depends(get_db)):
 
 
 @router.post("/analyze/text", response_model=AnalysisReport)
-def analyze_text(body: TextAnalysisRequest, db: Session = Depends(get_db)):
-    report = _make_report(
+def analyze_text(
+    body: TextAnalysisRequest,
+    user_id: str = Depends(current_user_id),
+):
+    if body.save_analysis:
+        raise HTTPException(
+            status_code=503,
+            detail="Server-side saved analysis is disabled until per-user storage is ready.",
+        )
+    return _charged_report(
+        user_id,
         body.resume_text,
         body.job_description,
         body.generate_ai_recommendations,
     )
-    return _persist_report(report, db) if body.save_analysis else report
 
 
 @router.get("/analyses")
