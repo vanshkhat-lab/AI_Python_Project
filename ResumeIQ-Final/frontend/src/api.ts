@@ -37,7 +37,11 @@ async function request<T>(
     throw new Error(message);
   }
 
-  return response.json() as Promise<T>;
+  const data = (await response.json()) as T;
+  if (path === "/analyze" || path === "/analyze/text") {
+    window.dispatchEvent(new Event("resumeiq:credits-changed"));
+  }
+  return data;
 }
 
 export async function healthCheck() {
