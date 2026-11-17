@@ -38,8 +38,12 @@ export default function CreditBalance({
 
     void loadCredits();
 
+    const refreshCredits = () => { void loadCredits(); };
+    window.addEventListener("resumeiq:credits-changed", refreshCredits);
+
     return () => {
       active = false;
+      window.removeEventListener("resumeiq:credits-changed", refreshCredits);
     };
   }, [userId]);
 
