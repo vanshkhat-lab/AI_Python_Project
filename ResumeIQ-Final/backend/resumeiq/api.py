@@ -402,6 +402,7 @@ def analyze_text(
 
 @router.get("/analyses")
 def list_analyses(db: Session = Depends(get_db)) -> list[dict[str, Any]]:
+    raise HTTPException(status_code=503, detail="Account-owned saved analyses are not enabled yet.")
     records = db.scalars(select(AnalysisRecord).order_by(AnalysisRecord.created_at.desc())).all()
     return [
         {
@@ -423,6 +424,7 @@ def _get_analysis(analysis_id: str, db: Session) -> AnalysisRecord:
 
 @router.get("/analyses/{analysis_id}", response_model=AnalysisReport)
 def get_analysis(analysis_id: str, db: Session = Depends(get_db)):
+    raise HTTPException(status_code=503, detail="Account-owned saved analyses are not enabled yet.")
     record = _get_analysis(analysis_id, db)
     created_at = record.created_at
     if created_at.tzinfo is None:
@@ -434,6 +436,7 @@ def get_analysis(analysis_id: str, db: Session = Depends(get_db)):
 
 @router.delete("/analyses/{analysis_id}", status_code=204)
 def delete_analysis(analysis_id: str, db: Session = Depends(get_db)):
+    raise HTTPException(status_code=503, detail="Account-owned saved analyses are not enabled yet.")
     record = _get_analysis(analysis_id, db)
     db.delete(record)
     db.commit()
@@ -441,6 +444,7 @@ def delete_analysis(analysis_id: str, db: Session = Depends(get_db)):
 
 @router.get("/analyses/{analysis_id}/report")
 def download_analysis_report(analysis_id: str, db: Session = Depends(get_db)):
+    raise HTTPException(status_code=503, detail="Account-owned saved analyses are not enabled yet.")
     record = _get_analysis(analysis_id, db)
     return Response(
         content=make_pdf_report(record.report),
