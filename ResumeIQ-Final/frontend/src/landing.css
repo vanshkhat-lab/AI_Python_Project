@@ -151,3 +151,7 @@
   .ri-auth-card { padding: 21px; }
   .ri-footer-inner { flex-direction: column; text-align: center; }
 }
+
+.ri-footer-policies { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px 16px; }
+.ri-footer-policies a { color: #437758; font-size: 12px; font-weight: 600; text-decoration: none; }
+.ri-footer-policies a:hover { text-decoration: underline; }
