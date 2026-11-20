@@ -1,7 +1,7 @@
 import CreditBalance from "./CreditBalance";
 import CreditCheckout from "./CreditCheckout";
 import LandingPage from "./LandingPage";
-import LegalPage, { getLegalRoute } from "./LegalPages";
+import LegalPage, { getLegalRoute, LegalLinks } from "./LegalPages";
 import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
@@ -97,6 +97,14 @@ if (session) {
       <CreditCheckout />
 
       {children}
+      <footer style={{
+        maxWidth: 1200, margin: "20px auto", padding: "20px",
+        display: "flex", gap: "16px", flexWrap: "wrap", justifyContent: "space-between",
+        alignItems: "center", borderTop: "1px solid #dfe8e2",
+      }}>
+        <span style={{ fontSize: 12, color: "#5d726b" }}>© {new Date().getFullYear()} ResumeIQ</span>
+        <LegalLinks className="ri-legal-links" />
+      </footer>
     </>
   );
 }
