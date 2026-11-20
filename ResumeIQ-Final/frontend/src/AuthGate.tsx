@@ -1,6 +1,7 @@
 import CreditBalance from "./CreditBalance";
 import CreditCheckout from "./CreditCheckout";
 import LandingPage from "./LandingPage";
+import LegalPage, { getLegalRoute } from "./LegalPages";
 import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
@@ -70,6 +71,11 @@ export default function AuthGate({
     } finally {
       setBusy(false);
     }
+  }
+
+  const legalRoute = getLegalRoute(window.location.pathname);
+  if (legalRoute) {
+    return <LegalPage kind={legalRoute} />;
   }
 
   if (checking) {
