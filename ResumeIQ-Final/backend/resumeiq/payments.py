@@ -14,6 +14,7 @@ import os
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
+from uuid import uuid4
 
 from fastapi import HTTPException
 
@@ -112,7 +113,7 @@ def create_order(user_id: str) -> dict:
         {
             "amount": PACK_AMOUNT_PAISE,
             "currency": PACK_CURRENCY,
-            "receipt": f"resumeiq_{user_id[:8]}",
+            "receipt": f"riq_{uuid4().hex[:20]}",
             "notes": {"product": "resumeiq_5_credits"},
         },
     )
@@ -226,4 +227,22 @@ def purchase_status(user_id: str, order_id: str) -> dict:
     row = _purchase(order_id)
     if row is None or row["user_id"] != user_id:
         raise HTTPException(status_code=404, detail="Payment order not found.")
+
+    # Recover if the checkout callback was lost and the webhook is delayed.
+    if row["status"] == "created":
+        payments = _razorpay(f"orders/{quote(order_id, safe='')}/payments")
+        items = payments.get("items", [])
+        if not isinstance(items, list):
+            raise HTTPException(status_code=502, detail="Invalid Razorpay payment response.")
+        for item in items:
+            if (
+                isinstance(item, dict)
+                and item.get("status") == "captured"
+                and item.get("order_id") == order_id
+                and isinstance(item.get("id"), str)
+            ):
+                _grant_captured(order_id, item["id"], user_id)
+                row = _purchase(order_id)
+                break
+
     return {"status": row["status"], "credits": row["credits"] if row["status"] == "paid" else 0}
