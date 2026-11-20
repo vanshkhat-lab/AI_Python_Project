@@ -94,3 +94,45 @@ export async function deleteAnalysis(id: string): Promise<void> {
     throw new Error("Could not delete the saved analysis.");
   }
 }
+
+export interface RazorpayCreditOrder {
+  key_id: string;
+  order_id: string;
+  amount: number;
+  currency: string;
+  credits: number;
+}
+
+export async function createCreditOrder(): Promise<RazorpayCreditOrder> {
+  return request<RazorpayCreditOrder>("/payments/create-order", { method: "POST" });
+}
+
+export async function verifyCreditPayment(payload: {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}): Promise<{ status: string; credits_added: number; already_processed: boolean }> {
+  const result = await request<{ status: string; credits_added: number; already_processed: boolean }>(
+    "/payments/verify",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  );
+  window.dispatchEvent(new Event("resumeiq:credits-changed"));
+  return result;
+}
+
+export async function checkCreditPayment(orderId: string): Promise<{
+  status: string;
+  credits: number;
+}> {
+  const result = await request<{ status: string; credits: number }>(
+    `/payments/orders/${encodeURIComponent(orderId)}`,
+  );
+  if (result.status === "paid") {
+    window.dispatchEvent(new Event("resumeiq:credits-changed"));
+  }
+  return result;
+}
