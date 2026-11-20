@@ -1,4 +1,5 @@
 import CreditBalance from "./CreditBalance";
+import CreditCheckout from "./CreditCheckout";
 import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
@@ -86,6 +87,7 @@ if (session) {
       </div>
 
       <CreditBalance userId={session.user.id} />
+      <CreditCheckout />
 
       {children}
     </>
