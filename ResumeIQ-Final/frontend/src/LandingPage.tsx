@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
 import "./landing.css";
+import { LegalLinks } from "./LegalPages";
 
 type AuthMode = "login" | "signup";
 
@@ -303,7 +304,7 @@ export default function LandingPage({
         <div className="ri-container ri-footer-inner">
           <a className="ri-brand" href="#top"><span className="ri-brand-icon">R</span><span>Resume<span className="ri-brand-highlight">IQ</span></span></a>
           <p>© {new Date().getFullYear()} ResumeIQ. Resume insights are informational and do not guarantee hiring outcomes.</p>
-          <a href="#top">Back to top ↑</a>
+          <LegalLinks className="ri-footer-policies" />
         </div>
       </footer>
     </div>
