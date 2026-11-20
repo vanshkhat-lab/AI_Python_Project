@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { useEffect } from "react";
 import "./legal.css";
 
@@ -298,7 +299,7 @@ function Contact() {
   );
 }
 
-const pageContents: Record<LegalPageKind, () => React.JSX.Element> = {
+const pageContents: Record<LegalPageKind, () => JSX.Element> = {
   privacy: PrivacyPolicy,
   terms: Terms,
   refunds: RefundPolicy,
