@@ -1,5 +1,6 @@
 import CreditBalance from "./CreditBalance";
 import CreditCheckout from "./CreditCheckout";
+import LandingPage from "./LandingPage";
 import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
@@ -96,50 +97,19 @@ if (session) {
 
 
   return (
-    <div style={{ maxWidth: 400, margin: "60px auto", padding: 20 }}>
-      <h1>ResumeIQ</h1>
-      <h2>{mode === "signup" ? "Create account" : "Log in"}</h2>
-
-      <form onSubmit={handleSubmit}>
-        <label>Email</label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          style={{ width: "100%", marginBottom: 12 }}
-        />
-
-        <label>Password</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          minLength={6}
-          required
-          style={{ width: "100%", marginBottom: 12 }}
-        />
-
-        <button type="submit" disabled={busy}>
-          {busy ? "Please wait..." :
-            mode === "signup" ? "Sign up" : "Log in"}
-        </button>
-      </form>
-
-      {message && <p>{message}</p>}
-
-      <button
-        type="button"
-        onClick={() => {
-          setMode(mode === "signup" ? "login" : "signup");
-          setMessage("");
-        }}
-        style={{ marginTop: 16 }}
-      >
-        {mode === "signup"
-          ? "Already have an account? Log in"
-          : "New user? Create an account"}
-      </button>
-    </div>
+    <LandingPage
+      mode={mode}
+      email={email}
+      password={password}
+      busy={busy}
+      message={message}
+      onModeChange={(nextMode) => {
+        setMode(nextMode);
+        setMessage("");
+      }}
+      onEmailChange={setEmail}
+      onPasswordChange={setPassword}
+      onSubmit={handleSubmit}
+    />
   );
 }
