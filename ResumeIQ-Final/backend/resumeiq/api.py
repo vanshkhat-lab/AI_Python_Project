@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, UploadF
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from starlette.datastructures import UploadFile as StarletteUploadFile
@@ -32,6 +32,12 @@ from backend.resumeiq.credits import (
 )
 from backend.resumeiq.db import create_tables, get_db
 from backend.resumeiq.models import AnalysisRecord, ClientFeedbackRecord
+from backend.resumeiq.payments import (
+    confirm_checkout,
+    confirm_webhook,
+    create_order,
+    purchase_status,
+)
 from backend.resumeiq.schemas import (
     AnalysisReport,
     ErrorDetail,
@@ -398,6 +404,45 @@ def analyze_text(
         body.job_description,
         body.generate_ai_recommendations,
     )
+
+
+class CheckoutConfirmation(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+
+
+@router.post("/payments/create-order")
+def create_credit_payment_order(user_id: str = Depends(current_user_id)) -> dict[str, Any]:
+    """Fixed ₹99 test order for exactly five credits."""
+    return create_order(user_id)
+
+
+@router.post("/payments/verify")
+def verify_credit_payment(
+    body: CheckoutConfirmation,
+    user_id: str = Depends(current_user_id),
+) -> dict[str, Any]:
+    return confirm_checkout(
+        user_id,
+        body.razorpay_order_id,
+        body.razorpay_payment_id,
+        body.razorpay_signature,
+    )
+
+
+@router.get("/payments/orders/{order_id}")
+def credit_payment_status(
+    order_id: str, user_id: str = Depends(current_user_id)
+) -> dict[str, Any]:
+    return purchase_status(user_id, order_id)
+
+
+@router.post("/payments/webhook")
+async def razorpay_credit_webhook(request: Request) -> dict[str, Any]:
+    signature = request.headers.get("x-razorpay-signature", "")
+    raw_body = await request.body()
+    return await asyncio.to_thread(confirm_webhook, raw_body, signature)
 
 
 @router.get("/analyses")
