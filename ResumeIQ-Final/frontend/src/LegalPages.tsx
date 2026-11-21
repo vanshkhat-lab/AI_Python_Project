@@ -219,8 +219,12 @@ function Terms() {
       </p>
       <h2>8. Legal operator and contact</h2>
       <p>
-        ResumeIQ's verified legal operator, business address, support contact and final
-        jurisdictional terms must be added before this draft is published for live customers.
+        ResumeIQ is being prepared as an independently operated individual or
+        sole-proprietor business in India, not a company or LLP. The verified
+        legal operator's name, merchant category, business contact address and
+        final jurisdictional terms must be added before these Terms are used
+        for live customers. Customer support:{" "}
+        <a href="mailto:ronicris1234@gmail.com">ronicris1234@gmail.com</a>.
       </p>
     </>
   );
@@ -359,9 +363,11 @@ function About() {
       </p>
       <h2>Business details</h2>
       <p>
-        ResumeIQ's verified legal operator and operating address are being finalized
-        for commercial launch. These details will be published here before live
-        payments are accepted.
+        ResumeIQ is being prepared for commercial operation in India as an
+        independently operated individual or sole-proprietor business, not as a
+        registered company or LLP. The exact merchant classification, verified
+        operator name and business contact address will be finalized during
+        payment-provider onboarding and disclosed before accepting live payments.
       </p>
       <h2>Support</h2>
       <p>
