@@ -18,7 +18,7 @@ These are **DRAFT** policies, not legal advice and not a substitute for review.
 
 1. The public About Us and Digital Delivery pages have been added as pre-launch drafts.
    Confirm the legal operator/business identity on About Us before accepting real payments.
-3. The approved customer-support address `ronicris1234@gmail.com` is included as the
+2. The approved customer-support address `ronicris1234@gmail.com` is included as the
    page's default; `VITE_SUPPORT_EMAIL` can override it on Netlify. Confirm the
    mailbox is actively monitored.
 3. Verify the business operating address and, if appropriate, configure
@@ -38,7 +38,7 @@ These are **DRAFT** policies, not legal advice and not a substitute for review.
    and location, and obtain qualified legal review as appropriate.
 9. Keep the TEST MODE disclosure until Razorpay production activation is completed and
    all real-payment flows have been secured and tested.
-10. Test all four URLs directly in a fresh browser tab, with and without an authenticated session.
+10. Test all six URLs directly in a fresh browser tab, with and without an authenticated session.
 11. Build and check locally with `npm run build` before merging or changing Netlify deployment branches.
 
 These environment variables are **public-facing** because they are compiled into the
