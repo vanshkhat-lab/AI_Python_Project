@@ -4,7 +4,7 @@ import "./legal.css";
 
 export type LegalPageKind = "privacy" | "terms" | "refunds" | "contact";
 
-const SUPPORT_EMAIL = (import.meta.env.VITE_SUPPORT_EMAIL ?? "").trim();
+const SUPPORT_EMAIL = (import.meta.env.VITE_SUPPORT_EMAIL || "ronicris1234@gmail.com").trim();
 const BUSINESS_ADDRESS = (import.meta.env.VITE_BUSINESS_ADDRESS ?? "").trim();
 const SUPPORT_PHONE = (import.meta.env.VITE_SUPPORT_PHONE ?? "").trim();
 const LAST_REVIEWED = "21 November 2026";
