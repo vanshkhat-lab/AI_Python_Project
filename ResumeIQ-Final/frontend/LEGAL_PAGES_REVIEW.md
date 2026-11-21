@@ -14,18 +14,20 @@ dashboard link to them, and `frontend/public/_redirects` supports direct URL loa
 
 These are **DRAFT** policies, not legal advice and not a substitute for review.
 
-1. Add the actual support email as a Netlify frontend environment variable:
-   `VITE_SUPPORT_EMAIL` (example format only: `support@YOUR_DOMAIN`).
-   You must operate the mailbox; do not configure an address that doesn't receive messages.
+1. The approved customer-support address `ronicris1234@gmail.com` is included as the
+   page's default; `VITE_SUPPORT_EMAIL` can override it on Netlify. Confirm the
+   mailbox is actively monitored.
 2. Verify the business operating address and, if appropriate, configure
    `VITE_BUSINESS_ADDRESS`. It will be displayed to the public as submitted.
 3. If publishing a support telephone number, configure `VITE_SUPPORT_PHONE` only
    if calls will be handled on that line.
 4. Identify the legal owner/operator and add the appropriate merchant name/address,
    jurisdiction and grievance/contact details.
-5. Review the proposed **seven-day refund rule** and set a final documented policy
-   for unused and used credits, technical failures, duplicate charges, refund requests,
-   and account closures. Do not promise processes you cannot perform.
+5. The owner has approved a **seven-calendar-day refund window for wholly unused credit packs**.
+   Confirm that the payment/credit ledger can identify whether credits from a particular
+   purchased pack have been used, and establish a real support and refund-fulfilment workflow.
+   The wording remains marked for pre-launch legal and operational review, particularly
+   for technical failures, duplicate charges, customer rights and account closures.
 6. Confirm actual data processing, cookies, deletion/retention, logging and backups,
    optional AI features, vendor details and support for account deletion requests.
 7. Verify whether any statutory notices or consents are needed based on your customers
