@@ -222,49 +222,73 @@ function RefundPolicy() {
   return (
     <>
       <p>
-        <strong>No real payments are currently accepted.</strong> The ₹99 checkout operates in
-        Razorpay Test Mode. This page outlines a proposed refund procedure for future
-        live credit-pack purchases and requires owner review before commercial launch.
+        <strong>No real payments are currently accepted.</strong> ResumeIQ's ₹99 checkout
+        operates in Razorpay Test Mode. The following refund policy has been approved by the
+        ResumeIQ owner for future live credit-pack sales, subject to final legal and operational
+        review before live payments are enabled.
       </p>
-      <h2>1. Digital delivery</h2>
+
+      <h2>1. Credit pack and delivery</h2>
       <p>
-        Credits are digital services delivered to a user's ResumeIQ account following
-        verification of a successful payment. The proposed pack contains five additional
-        analysis credits for ₹99 and does not ship physical goods.
+        A ₹99 purchase provides five additional resume-analysis credits to the purchaser's
+        ResumeIQ account after successful payment verification. Credits are delivered
+        digitally; there are no physical goods or shipping charges.
       </p>
-      <h2>2. Unsuccessful or duplicate charges</h2>
+
+      <h2>2. Refunds for wholly unused packs — 7 days</h2>
       <p>
-        If a live payment is captured but credits are not added, or the same order is charged
-        more than once, the customer should contact support with the transaction reference.
-        We will investigate the payment status and provide the missing credits or an
-        appropriate refund where due.
+        You may request a refund within <strong>seven calendar days of the successful
+        payment</strong> if <strong>none of the five credits from that purchased pack has
+        been used</strong>. Once we verify the purchase, account and unused pack status,
+        an eligible refund will be approved to the original payment method. A refund request
+        received after seven calendar days is not covered by this unused-pack policy,
+        but statutory rights and remedies for payment or service failures still apply.
       </p>
-      <h2>3. Cancellation and unused credits</h2>
+
+      <h2>3. Credits already used</h2>
       <p>
-        There is no recurring subscription to cancel in the current version. A proposed
-        customer-friendly approach is to accept refund requests for wholly unused credit
-        packs within seven calendar days of purchase, subject to payment verification,
-        applicable consumer law, and the terms displayed at the time of purchase.
-        <strong> This seven-day rule is a draft proposal, not an active promise.</strong>
+        If one or more credits from the purchased pack have been used, a standard
+        unused-pack refund is not available. We will review requests case by case,
+        including technical failures, incorrect credit deductions, duplicate payments,
+        fraud or other circumstances requiring a remedy under applicable law.
       </p>
-      <h2>4. Used credits</h2>
+
+      <h2>4. Missing credits, duplicate or unsuccessful payments</h2>
       <p>
-        Once credits are used to generate analyses, requests will be reviewed according to
-        the nature of the issue, including duplicate charges, service failure, fraud, and
-        applicable consumer rights. A final policy must not restrict refunds required by law.
+        If money is deducted but purchased credits are not delivered, or a transaction
+        is charged twice, contact us with the payment reference. We will verify the
+        transaction and provide the missing credits or an appropriate refund. Failed
+        or pending transactions will be handled according to their confirmed payment
+        status and applicable payment-provider procedures.
       </p>
-      <h2>5. How refunds will be handled</h2>
+
+      <h2>5. Cancellation</h2>
       <p>
-        Customers will be able to contact the published ResumeIQ support address with their
-        account email and Razorpay order or payment reference. They should never share their
-        card number, CVV, OTP or banking password. Approved refunds will ordinarily be routed
-        through the original payment channel; exact processing times depend on the payment
-        provider and the final published policy.
+        ResumeIQ currently sells one-time credit packs and does not offer recurring
+        subscriptions, so there is no ongoing subscription to cancel. Requests to
+        reverse a completed credit-pack purchase are handled under the refund rules above.
       </p>
-      <h2>6. Test transactions</h2>
+
+      <h2>6. How to request a refund</h2>
       <p>
-        Transactions completed using Razorpay Test Mode do not transfer actual money and are
-        not eligible for real-money refunds. Test credits are for development and evaluation.
+        Email <a href="mailto:ronicris1234@gmail.com">ronicris1234@gmail.com</a> from your
+        account email address, with the subject "ResumeIQ refund request" and your
+        Razorpay order or payment reference, purchase date and reason for the request.
+        Do not share card numbers, CVVs, OTPs or passwords. We will verify eligibility
+        and, when approved, initiate the refund to the original payment method.
+        Bank or payment-provider processing times may vary.
+      </p>
+
+      <h2>7. Razorpay Test Mode</h2>
+      <p>
+        Razorpay Test Mode transactions do not transfer real money and therefore do not
+        involve real-money refunds. Test credits are used only for product evaluation.
+      </p>
+
+      <h2>8. Consumer rights</h2>
+      <p>
+        This policy does not override any refunds, remedies or other rights that customers
+        may be entitled to under applicable consumer protection law.
       </p>
     </>
   );
