@@ -2,7 +2,7 @@ import type { JSX } from "react";
 import { useEffect } from "react";
 import "./legal.css";
 
-export type LegalPageKind = "privacy" | "terms" | "refunds" | "contact";
+export type LegalPageKind = "privacy" | "terms" | "refunds" | "contact" | "about" | "delivery";
 
 const SUPPORT_EMAIL = (import.meta.env.VITE_SUPPORT_EMAIL || "ronicris1234@gmail.com").trim();
 const BUSINESS_ADDRESS = (import.meta.env.VITE_BUSINESS_ADDRESS ?? "").trim();
@@ -14,6 +14,8 @@ const paths: Record<LegalPageKind, string> = {
   terms: "/terms-and-conditions",
   refunds: "/refund-and-cancellation-policy",
   contact: "/contact-us",
+  about: "/about-us",
+  delivery: "/digital-delivery-policy",
 };
 
 const labels: Record<LegalPageKind, string> = {
@@ -21,6 +23,8 @@ const labels: Record<LegalPageKind, string> = {
   terms: "Terms & Conditions",
   refunds: "Refund & Cancellation Policy",
   contact: "Contact Us",
+  about: "About ResumeIQ",
+  delivery: "Digital Delivery Policy",
 };
 
 export function getLegalRoute(pathname: string): LegalPageKind | null {
@@ -29,6 +33,8 @@ export function getLegalRoute(pathname: string): LegalPageKind | null {
   if (path === "/terms-and-conditions" || path === "/terms") return "terms";
   if (path === "/refund-and-cancellation-policy" || path === "/refunds") return "refunds";
   if (path === "/contact-us" || path === "/contact") return "contact";
+  if (path === "/about-us" || path === "/about") return "about";
+  if (path === "/digital-delivery-policy" || path === "/delivery") return "delivery";
   return null;
 }
 
@@ -39,6 +45,8 @@ export function LegalLinks({ className = "" }: { className?: string }) {
       <a href={paths.terms}>Terms & Conditions</a>
       <a href={paths.refunds}>Refunds & Cancellations</a>
       <a href={paths.contact}>Contact</a>
+      <a href={paths.about}>About Us</a>
+      <a href={paths.delivery}>Digital Delivery</a>
     </nav>
   );
 }
@@ -323,11 +331,98 @@ function Contact() {
   );
 }
 
+function About() {
+  return (
+    <>
+      <p>
+        ResumeIQ is a web-based resume analysis tool designed to help job applicants understand
+        how the evidence in their resume aligns with a particular job description.
+      </p>
+      <h2>What ResumeIQ does</h2>
+      <p>
+        Users upload or paste resume information and provide a job description. ResumeIQ
+        compares skills and other requirements, shows evidence-based matching information,
+        and suggests areas where the resume could be clearer or more complete.
+      </p>
+      <h2>How the service works</h2>
+      <p>
+        After creating an account, eligible users start with two introductory analysis
+        credits. Each completed analysis consumes a credit. The current test-stage
+        checkout demonstrates a one-time ₹99 pack containing five additional credits.
+        No real-money payments are accepted while Razorpay Test Mode is enabled.
+      </p>
+      <h2>What ResumeIQ does not promise</h2>
+      <p>
+        ResumeIQ does not guarantee a job interview, an offer of employment, or an
+        official applicant tracking system score. Its analysis is informational and
+        should be reviewed by the applicant before using any recommendations.
+      </p>
+      <h2>Business details</h2>
+      <p>
+        ResumeIQ's verified legal operator and operating address are being finalized
+        for commercial launch. These details will be published here before live
+        payments are accepted.
+      </p>
+      <h2>Support</h2>
+      <p>
+        For account, credit or payment assistance, see our{" "}
+        <a href={paths.contact}>Contact Us page</a>.
+      </p>
+    </>
+  );
+}
+
+function Delivery() {
+  return (
+    <>
+      <p>
+        ResumeIQ provides a digital service only. No physical products are sold or
+        shipped, and no courier delivery is required.
+      </p>
+      <h2>Digital delivery of credits</h2>
+      <p>
+        After a successful payment has been verified by our backend, the purchased
+        credits are added to the customer's signed-in ResumeIQ account. The current
+        proposed pack provides five analysis credits for ₹99 as a one-time purchase.
+      </p>
+      <h2>When will credits appear?</h2>
+      <p>
+        Verified payments normally trigger an automated credit update. If payment
+        verification or the payment provider is delayed, credits may not appear
+        immediately. Customers should check their credit balance and purchase
+        status before retrying a payment.
+      </p>
+      <h2>Missing digital delivery</h2>
+      <p>
+        If a charge is completed but the credits do not appear, email{" "}
+        <a href="mailto:ronicris1234@gmail.com">ronicris1234@gmail.com</a> with
+        your account email and Razorpay order or payment reference. We will
+        investigate and arrange missing credits or a refund where appropriate.
+        Do not send full card details, passwords or OTPs.
+      </p>
+      <h2>No shipping or physical returns</h2>
+      <p>
+        Delivery is electronic to the customer's account; there are no shipping
+        fees, tracking numbers, delivery addresses or physical returns. Refund
+        eligibility is governed by the{" "}
+        <a href={paths.refunds}>Refund & Cancellation Policy</a>.
+      </p>
+      <h2>Current test-stage checkout</h2>
+      <p>
+        Razorpay Test Mode does not collect real money. The current purchase
+        flow and delivery of test credits are available for testing only.
+      </p>
+    </>
+  );
+}
+
 const pageContents: Record<LegalPageKind, () => JSX.Element> = {
   privacy: PrivacyPolicy,
   terms: Terms,
   refunds: RefundPolicy,
   contact: Contact,
+  about: About,
+  delivery: Delivery,
 };
 
 export default function LegalPage({ kind }: { kind: LegalPageKind }) {
