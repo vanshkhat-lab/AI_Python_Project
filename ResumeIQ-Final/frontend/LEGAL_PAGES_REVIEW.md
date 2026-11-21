@@ -25,8 +25,10 @@ These are **DRAFT** policies, not legal advice and not a substitute for review.
    `VITE_BUSINESS_ADDRESS`. It will be displayed to the public as submitted.
 4. If publishing a support telephone number, configure `VITE_SUPPORT_PHONE` only
    if calls will be handled on that line.
-5. Identify the legal owner/operator and add the appropriate merchant name/address,
-   jurisdiction and grievance/contact details.
+5. ResumeIQ is planned as an independently operated individual / sole-proprietor
+   business in India, not a registered company or LLP. Verify the merchant category,
+   legal operator name, business contact address, jurisdiction and required grievance
+   contact with Razorpay before live checkout. This is not a claim of completed KYC.
 6. The owner has approved a **seven-calendar-day refund window for wholly unused credit packs**.
    Confirm that the payment/credit ledger can identify whether credits from a particular
    purchased pack have been used, and establish a real support and refund-fulfilment workflow.
