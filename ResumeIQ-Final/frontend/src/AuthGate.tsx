@@ -1,4 +1,7 @@
 import CreditBalance from "./CreditBalance";
+import CreditCheckout from "./CreditCheckout";
+import LandingPage from "./LandingPage";
+import LegalPage, { getLegalRoute, LegalLinks } from "./LegalPages";
 import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
@@ -70,6 +73,11 @@ export default function AuthGate({
     }
   }
 
+  const legalRoute = getLegalRoute(window.location.pathname);
+  if (legalRoute) {
+    return <LegalPage kind={legalRoute} />;
+  }
+
   if (checking) {
     return <p>Checking your account...</p>;
   }
@@ -86,58 +94,36 @@ if (session) {
       </div>
 
       <CreditBalance userId={session.user.id} />
+      <CreditCheckout />
 
       {children}
+      <footer style={{
+        maxWidth: 1200, margin: "20px auto", padding: "20px",
+        display: "flex", gap: "16px", flexWrap: "wrap", justifyContent: "space-between",
+        alignItems: "center", borderTop: "1px solid #dfe8e2",
+      }}>
+        <span style={{ fontSize: 12, color: "#5d726b" }}>© {new Date().getFullYear()} ResumeIQ</span>
+        <LegalLinks className="ri-legal-links" />
+      </footer>
     </>
   );
 }
 
 
   return (
-    <div style={{ maxWidth: 400, margin: "60px auto", padding: 20 }}>
-      <h1>ResumeIQ</h1>
-      <h2>{mode === "signup" ? "Create account" : "Log in"}</h2>
-
-      <form onSubmit={handleSubmit}>
-        <label>Email</label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          style={{ width: "100%", marginBottom: 12 }}
-        />
-
-        <label>Password</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          minLength={6}
-          required
-          style={{ width: "100%", marginBottom: 12 }}
-        />
-
-        <button type="submit" disabled={busy}>
-          {busy ? "Please wait..." :
-            mode === "signup" ? "Sign up" : "Log in"}
-        </button>
-      </form>
-
-      {message && <p>{message}</p>}
-
-      <button
-        type="button"
-        onClick={() => {
-          setMode(mode === "signup" ? "login" : "signup");
-          setMessage("");
-        }}
-        style={{ marginTop: 16 }}
-      >
-        {mode === "signup"
-          ? "Already have an account? Log in"
-          : "New user? Create an account"}
-      </button>
-    </div>
+    <LandingPage
+      mode={mode}
+      email={email}
+      password={password}
+      busy={busy}
+      message={message}
+      onModeChange={(nextMode) => {
+        setMode(nextMode);
+        setMessage("");
+      }}
+      onEmailChange={setEmail}
+      onPasswordChange={setPassword}
+      onSubmit={handleSubmit}
+    />
   );
 }

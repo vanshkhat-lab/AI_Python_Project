@@ -1,23 +1,47 @@
+import { supabase } from "./supabase";
 import type { AnalysisReport, CustomerFeedback } from "./types";
 
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
 const API_BASE = `${API_ORIGIN}/api`;
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function request<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const {
+    data: { session },
+    error: authError,
+  } = await supabase.auth.getSession();
+
+  if (authError || !session?.access_token) {
+    throw new Error("Please log in to continue.");
+  }
+
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
       ...(options.headers ?? {}),
+      Authorization: `Bearer ${session.access_token}`,
     },
   });
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
-    const message = payload?.error?.message ?? "The request could not be completed.";
+
+    const message =
+      payload?.error?.message ??
+      (typeof payload?.detail === "string"
+        ? payload.detail
+        : "The request could not be completed.");
+
     throw new Error(message);
   }
 
-  return response.json() as Promise<T>;
+  const data = (await response.json()) as T;
+  if (path === "/analyze" || path === "/analyze/text") {
+    window.dispatchEvent(new Event("resumeiq:credits-changed"));
+  }
+  return data;
 }
 
 export async function healthCheck() {
@@ -69,4 +93,46 @@ export async function deleteAnalysis(id: string): Promise<void> {
   if (!response.ok) {
     throw new Error("Could not delete the saved analysis.");
   }
+}
+
+export interface RazorpayCreditOrder {
+  key_id: string;
+  order_id: string;
+  amount: number;
+  currency: string;
+  credits: number;
+}
+
+export async function createCreditOrder(): Promise<RazorpayCreditOrder> {
+  return request<RazorpayCreditOrder>("/payments/create-order", { method: "POST" });
+}
+
+export async function verifyCreditPayment(payload: {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}): Promise<{ status: string; credits_added: number; already_processed: boolean }> {
+  const result = await request<{ status: string; credits_added: number; already_processed: boolean }>(
+    "/payments/verify",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  );
+  window.dispatchEvent(new Event("resumeiq:credits-changed"));
+  return result;
+}
+
+export async function checkCreditPayment(orderId: string): Promise<{
+  status: string;
+  credits: number;
+}> {
+  const result = await request<{ status: string; credits: number }>(
+    `/payments/orders/${encodeURIComponent(orderId)}`,
+  );
+  if (result.status === "paid") {
+    window.dispatchEvent(new Event("resumeiq:credits-changed"));
+  }
+  return result;
 }

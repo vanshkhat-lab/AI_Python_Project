@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, UploadF
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from starlette.datastructures import UploadFile as StarletteUploadFile
@@ -24,8 +24,20 @@ from backend.resumeiq.config import (
     MAX_TEXT_LENGTH,
     MAX_UPLOAD_BYTES,
 )
+from backend.resumeiq.credits import (
+    complete_credit,
+    current_user_id,
+    refund_credit,
+    reserve_credit,
+)
 from backend.resumeiq.db import create_tables, get_db
 from backend.resumeiq.models import AnalysisRecord, ClientFeedbackRecord
+from backend.resumeiq.payments import (
+    confirm_checkout,
+    confirm_webhook,
+    create_order,
+    purchase_status,
+)
 from backend.resumeiq.schemas import (
     AnalysisReport,
     ErrorDetail,
@@ -70,7 +82,7 @@ app.add_middleware(
     allow_origins=FRONTEND_ORIGINS,
     allow_credentials=False,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 
@@ -288,8 +300,34 @@ def _persist_report(report: AnalysisReport, db: Session) -> AnalysisReport:
     )
 
 
+def _charged_report(
+    user_id: str,
+    resume_text: str,
+    job_description: str,
+    generate_ai: bool = False,
+    extraction_warnings: list[str] | None = None,
+) -> AnalysisReport:
+    """Reserve one credit, finalize after a successful report, refund on failure."""
+    transaction_id = reserve_credit(user_id)
+    try:
+        report = _make_report(
+            resume_text, job_description, generate_ai, extraction_warnings
+        )
+        complete_credit(user_id, transaction_id)
+        return report
+    except BaseException:
+        try:
+            refund_credit(user_id, transaction_id)
+        except Exception:
+            logger.exception("Credit refund needs reconciliation; transaction=%s", transaction_id)
+        raise
+
+
 @router.post("/analyze", response_model=AnalysisReport)
-async def analyze(request: Request, db: Session = Depends(get_db)):
+async def analyze(
+    request: Request,
+    user_id: str = Depends(current_user_id),
+):
     content_type = request.headers.get("content-type", "")
     if content_type.startswith("application/json"):
         try:
@@ -298,13 +336,18 @@ async def analyze(request: Request, db: Session = Depends(get_db)):
             raise HTTPException(
                 status_code=422, detail="The analysis request is invalid."
             ) from error
-        report = await asyncio.to_thread(
-            _make_report,
+        if payload.save_analysis:
+            raise HTTPException(
+                status_code=503,
+                detail="Server-side saved analysis is disabled until per-user storage is ready.",
+            )
+        return await asyncio.to_thread(
+            _charged_report,
+            user_id,
             payload.resume_text,
             payload.job_description,
             payload.generate_ai_recommendations,
         )
-        return _persist_report(report, db) if payload.save_analysis else report
 
     if content_type.startswith("multipart/form-data"):
         form = await request.form()
@@ -325,14 +368,19 @@ async def analyze(request: Request, db: Session = Depends(get_db)):
             )
         generate_ai = str(form.get("generate_ai_recommendations", "false")).lower() == "true"
         save_analysis = str(form.get("save_analysis", "false")).lower() == "true"
-        report = await asyncio.to_thread(
-            _make_report,
+        if save_analysis:
+            raise HTTPException(
+                status_code=503,
+                detail="Server-side saved analysis is disabled until per-user storage is ready.",
+            )
+        return await asyncio.to_thread(
+            _charged_report,
+            user_id,
             resume_text,
             job_description,
             generate_ai,
             extraction_warnings,
         )
-        return _persist_report(report, db) if save_analysis else report
 
     raise HTTPException(
         status_code=415,
@@ -341,17 +389,65 @@ async def analyze(request: Request, db: Session = Depends(get_db)):
 
 
 @router.post("/analyze/text", response_model=AnalysisReport)
-def analyze_text(body: TextAnalysisRequest, db: Session = Depends(get_db)):
-    report = _make_report(
+def analyze_text(
+    body: TextAnalysisRequest,
+    user_id: str = Depends(current_user_id),
+):
+    if body.save_analysis:
+        raise HTTPException(
+            status_code=503,
+            detail="Server-side saved analysis is disabled until per-user storage is ready.",
+        )
+    return _charged_report(
+        user_id,
         body.resume_text,
         body.job_description,
         body.generate_ai_recommendations,
     )
-    return _persist_report(report, db) if body.save_analysis else report
+
+
+class CheckoutConfirmation(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+
+
+@router.post("/payments/create-order")
+def create_credit_payment_order(user_id: str = Depends(current_user_id)) -> dict[str, Any]:
+    """Fixed ₹99 test order for exactly five credits."""
+    return create_order(user_id)
+
+
+@router.post("/payments/verify")
+def verify_credit_payment(
+    body: CheckoutConfirmation,
+    user_id: str = Depends(current_user_id),
+) -> dict[str, Any]:
+    return confirm_checkout(
+        user_id,
+        body.razorpay_order_id,
+        body.razorpay_payment_id,
+        body.razorpay_signature,
+    )
+
+
+@router.get("/payments/orders/{order_id}")
+def credit_payment_status(
+    order_id: str, user_id: str = Depends(current_user_id)
+) -> dict[str, Any]:
+    return purchase_status(user_id, order_id)
+
+
+@router.post("/payments/webhook")
+async def razorpay_credit_webhook(request: Request) -> dict[str, Any]:
+    signature = request.headers.get("x-razorpay-signature", "")
+    raw_body = await request.body()
+    return await asyncio.to_thread(confirm_webhook, raw_body, signature)
 
 
 @router.get("/analyses")
 def list_analyses(db: Session = Depends(get_db)) -> list[dict[str, Any]]:
+    raise HTTPException(status_code=503, detail="Account-owned saved analyses are not enabled yet.")
     records = db.scalars(select(AnalysisRecord).order_by(AnalysisRecord.created_at.desc())).all()
     return [
         {
@@ -373,6 +469,7 @@ def _get_analysis(analysis_id: str, db: Session) -> AnalysisRecord:
 
 @router.get("/analyses/{analysis_id}", response_model=AnalysisReport)
 def get_analysis(analysis_id: str, db: Session = Depends(get_db)):
+    raise HTTPException(status_code=503, detail="Account-owned saved analyses are not enabled yet.")
     record = _get_analysis(analysis_id, db)
     created_at = record.created_at
     if created_at.tzinfo is None:
@@ -384,6 +481,7 @@ def get_analysis(analysis_id: str, db: Session = Depends(get_db)):
 
 @router.delete("/analyses/{analysis_id}", status_code=204)
 def delete_analysis(analysis_id: str, db: Session = Depends(get_db)):
+    raise HTTPException(status_code=503, detail="Account-owned saved analyses are not enabled yet.")
     record = _get_analysis(analysis_id, db)
     db.delete(record)
     db.commit()
@@ -391,6 +489,7 @@ def delete_analysis(analysis_id: str, db: Session = Depends(get_db)):
 
 @router.get("/analyses/{analysis_id}/report")
 def download_analysis_report(analysis_id: str, db: Session = Depends(get_db)):
+    raise HTTPException(status_code=503, detail="Account-owned saved analyses are not enabled yet.")
     record = _get_analysis(analysis_id, db)
     return Response(
         content=make_pdf_report(record.report),
