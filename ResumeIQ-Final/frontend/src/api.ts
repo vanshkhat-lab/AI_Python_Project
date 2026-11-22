@@ -95,12 +95,29 @@ export async function deleteAnalysis(id: string): Promise<void> {
   }
 }
 
+export interface PaymentConfiguration {
+  mode: "test" | "live";
+  enabled: boolean;
+}
+
+// This endpoint returns public payment readiness data; it contains no credentials.
+export async function getPaymentConfiguration(): Promise<PaymentConfiguration> {
+  const response = await fetch(`${API_BASE}/payments/config`);
+  if (!response.ok) throw new Error("Payment status is currently unavailable.");
+  const data = (await response.json()) as PaymentConfiguration;
+  if (!["test", "live"].includes(data.mode) || typeof data.enabled !== "boolean") {
+    throw new Error("Invalid payment configuration.");
+  }
+  return data;
+}
+
 export interface RazorpayCreditOrder {
   key_id: string;
   order_id: string;
   amount: number;
   currency: string;
   credits: number;
+  mode: "test" | "live";
 }
 
 export async function createCreditOrder(): Promise<RazorpayCreditOrder> {

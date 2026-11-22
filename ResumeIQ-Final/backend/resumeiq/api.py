@@ -37,6 +37,7 @@ from backend.resumeiq.payments import (
     confirm_webhook,
     create_order,
     purchase_status,
+    checkout_config,
 )
 from backend.resumeiq.schemas import (
     AnalysisReport,
@@ -412,9 +413,15 @@ class CheckoutConfirmation(BaseModel):
     razorpay_signature: str
 
 
+@router.get("/payments/config")
+def get_payment_configuration() -> dict[str, Any]:
+    """Expose only payment mode and readiness, never API credentials."""
+    return checkout_config()
+
+
 @router.post("/payments/create-order")
 def create_credit_payment_order(user_id: str = Depends(current_user_id)) -> dict[str, Any]:
-    """Fixed ₹99 test order for exactly five credits."""
+    """Fixed ₹99 order for exactly five credits (server-controlled mode)."""
     return create_order(user_id)
 
 

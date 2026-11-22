@@ -1,4 +1,4 @@
-"""Razorpay TEST-only credit purchases.
+"""Razorpay credit purchases with explicit test/live environment isolation.
 
 Fixed price and credits are defined on the backend, never accepted from React.
 All Razorpay and Supabase privileged keys remain server-side.
@@ -25,20 +25,43 @@ PACK_CREDITS = 5
 PACK_CURRENCY = "INR"
 
 
+def payment_mode() -> str:
+    """The server, never the browser, selects Razorpay's environment."""
+    mode = os.getenv("RAZORPAY_MODE", "test").strip().lower()
+    if mode not in ("test", "live"):
+        raise HTTPException(status_code=503, detail="Invalid Razorpay mode configuration.")
+    return mode
+
+
 def _env() -> tuple[str, str, str, str, str]:
-    key_id = os.getenv("RAZORPAY_KEY_ID", "")
+    mode = payment_mode()
+    key_id = os.getenv("RAZORPAY_KEY_ID", "").strip()
     key_secret = os.getenv("RAZORPAY_KEY_SECRET", "")
     supabase_url = os.getenv("SUPABASE_URL", "").rstrip("/")
     supabase_secret = os.getenv("SUPABASE_SECRET_KEY", "")
     webhook_secret = os.getenv("RAZORPAY_WEBHOOK_SECRET", "")
+    expected_prefix = "rzp_live_" if mode == "live" else "rzp_test_"
+    if mode == "live" and os.getenv("RAZORPAY_LIVE_ENABLED", "").lower() != "true":
+        raise HTTPException(status_code=503, detail="Live checkout is not enabled for this service.")
     if not (
-        key_id.startswith("rzp_test_")
+        key_id.startswith(expected_prefix)
         and key_secret
         and supabase_url.startswith("https://")
         and supabase_secret
+        and (mode != "live" or webhook_secret)
     ):
-        raise HTTPException(status_code=503, detail="Test payment gateway is not configured.")
+        raise HTTPException(status_code=503, detail="Payment gateway configuration is incomplete.")
     return key_id, key_secret, supabase_url, supabase_secret, webhook_secret
+
+
+def checkout_config() -> dict:
+    """Public, non-secret status for accurate payment labels in the frontend."""
+    mode = payment_mode()
+    try:
+        _env()
+    except HTTPException:
+        return {"mode": mode, "enabled": False}
+    return {"mode": mode, "enabled": True}
 
 
 def _http_json(
@@ -145,6 +168,7 @@ def create_order(user_id: str) -> dict:
         "amount": PACK_AMOUNT_PAISE,
         "currency": PACK_CURRENCY,
         "credits": PACK_CREDITS,
+        "mode": payment_mode(),
     }
 
 
