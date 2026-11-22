@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   createCreditOrder,
   verifyCreditPayment,
   checkCreditPayment,
+  getPaymentConfiguration,
 } from "./api";
+import type { PaymentConfiguration } from "./api";
 
 type CheckoutResult = {
   razorpay_order_id: string;
@@ -60,13 +62,29 @@ export default function CreditCheckout() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [pendingOrderId, setPendingOrderId] = useState("");
+  const [configuration, setConfiguration] = useState<PaymentConfiguration | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPaymentConfiguration().then((value) => {
+      if (!cancelled) setConfiguration(value);
+    }).catch(() => {
+      if (!cancelled) setNotice("Payment checkout is unavailable. Try again later.");
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   async function startCheckout() {
+    if (!configuration?.enabled) {
+      setNotice("Payment checkout is not enabled.");
+      return;
+    }
     setBusy(true);
     setNotice("");
     try {
       await loadRazorpayCheckout();
       const order = await createCreditOrder();
+      if (order.mode !== configuration.mode) throw new Error("Payment mode mismatch. Please refresh.");
       setPendingOrderId(order.order_id);
       if (!window.Razorpay) {
         throw new Error("Razorpay Checkout could not start.");
@@ -77,7 +95,7 @@ export default function CreditCheckout() {
         amount: order.amount,
         currency: order.currency,
         name: "ResumeIQ",
-        description: "5 resume analysis credits — TEST MODE",
+        description: order.mode === "live" ? "5 resume analysis credits" : "5 resume analysis credits — TEST MODE",
         theme: { color: "#1d7a4f" },
         modal: {
           ondismiss: () => {
@@ -90,7 +108,7 @@ export default function CreditCheckout() {
             try {
               setBusy(true);
               const result = await verifyCreditPayment(payment);
-              setNotice(`Test payment verified. ${result.credits_added} credits added to your account.`);
+              setNotice(`Payment verified. ${result.credits_added} credits added to your account.`);
               setPendingOrderId("");
             } catch (error) {
               setNotice(error instanceof Error ? error.message : "Payment verification pending. Try Check purchase status.");
@@ -101,7 +119,7 @@ export default function CreditCheckout() {
         },
       });
       checkout.on("payment.failed", () => {
-        setNotice("Test payment failed. No credits added.");
+        setNotice("Payment failed. No credits added.");
         setBusy(false);
       });
       checkout.open();
@@ -139,11 +157,23 @@ export default function CreditCheckout() {
     }}>
       <h3 style={{ marginTop: 0 }}>ResumeIQ Credit Pack</h3>
       <p>Get 5 more resume analyses for ₹99 — one-time purchase.</p>
-      <p style={{ color: "#965014", fontWeight: 600 }}>
-        TEST MODE: This checkout does not collect real payments.
-      </p>
-      <button type="button" disabled={busy} onClick={() => void startCheckout()}>
-        {busy ? "Processing..." : "Buy 5 Credits — ₹99 (Test)"}
+      {configuration?.mode === "test" && (
+        <p style={{ color: "#965014", fontWeight: 600 }}>
+          TEST MODE: This checkout does not collect real payments.
+        </p>
+      )}
+      {configuration?.mode === "live" && configuration.enabled && (
+        <p style={{ color: "#225c41", fontWeight: 600 }}>
+          LIVE CHECKOUT: ₹99 is a real payment for five analysis credits.
+        </p>
+      )}
+      {!configuration?.enabled && (
+        <p style={{ color: "#965014" }}>
+          Checkout is unavailable until the payment service is configured.
+        </p>
+      )}
+      <button type="button" disabled={busy || !configuration?.enabled} onClick={() => void startCheckout()}>
+        {busy ? "Processing..." : configuration?.mode === "live" ? "Buy 5 Credits — ₹99" : "Buy 5 Credits — ₹99 (Test)"}
       </button>
       {pendingOrderId && (
         <button type="button" disabled={busy} onClick={() => void checkStatus()}
