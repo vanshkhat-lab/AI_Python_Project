@@ -4,6 +4,7 @@ import {
   verifyCreditPayment,
   checkCreditPayment,
   getPaymentConfiguration,
+  refundLatestUnusedTestPack,
 } from "./api";
 import type { PaymentConfiguration } from "./api";
 
@@ -60,6 +61,7 @@ function loadRazorpayCheckout(): Promise<void> {
 
 export default function CreditCheckout() {
   const [busy, setBusy] = useState(false);
+  const [refunding, setRefunding] = useState(false);
   const [notice, setNotice] = useState("");
   const [pendingOrderId, setPendingOrderId] = useState("");
   const [configuration, setConfiguration] = useState<PaymentConfiguration | null>(null);
@@ -147,6 +149,26 @@ export default function CreditCheckout() {
     }
   }
 
+  async function testRefund() {
+    if (configuration?.mode !== "test" || !configuration.enabled) return;
+    setRefunding(true);
+    setNotice("");
+    try {
+      const result = await refundLatestUnusedTestPack();
+      if (result.status === "not_found") {
+        setNotice("No wholly unused paid test pack was found.");
+      } else if (result.status === "ineligible") {
+        setNotice(`Refund not eligible: ${result.reason ?? "unknown reason"}`);
+      } else {
+        setNotice(`Test refund status: ${result.status}. ${result.refund_id ? "Refund ID: " + result.refund_id : "Check again if pending."}`);
+      }
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Test refund request failed.");
+    } finally {
+      setRefunding(false);
+    }
+  }
+
   return (
     <section style={{
       margin: "12px",
@@ -175,6 +197,17 @@ export default function CreditCheckout() {
       <button type="button" disabled={busy || !configuration?.enabled} onClick={() => void startCheckout()}>
         {busy ? "Processing..." : configuration?.mode === "live" ? "Buy 5 Credits — ₹99" : "Buy 5 Credits — ₹99 (Test)"}
       </button>
+      {configuration?.mode === "test" && configuration.enabled && (
+        <div style={{ marginTop: 12 }}>
+          <button type="button" disabled={busy || refunding}
+            onClick={() => void testRefund()}>
+            {refunding ? "Processing refund..." : "Refund Unused Test Pack"}
+          </button>
+          <p style={{ color: "#965014", fontSize: 13, margin: "8px 0 0" }}>
+            Staging only: requests a Razorpay Test Mode refund and removes five unused purchased credits.
+          </p>
+        </div>
+      )}
       {pendingOrderId && (
         <button type="button" disabled={busy} onClick={() => void checkStatus()}
           style={{ marginLeft: 12 }}>
