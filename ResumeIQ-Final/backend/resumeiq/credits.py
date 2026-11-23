@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import os
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from uuid import uuid4
@@ -103,9 +104,13 @@ def _rpc(function: str, user_id: str, request_id: str) -> object:
         ) from exc
 
 
+def _ledger_v2() -> bool:
+    return os.getenv("RESUMEIQ_LEDGER_V2_ENABLED", "").strip().lower() == "true"
+
+
 def reserve_credit(user_id: str) -> str:
     request_id = str(uuid4())
-    remaining = _rpc("reserve_analysis_credit", user_id, request_id)
+    remaining = _rpc("reserve_analysis_credit_v2" if _ledger_v2() else "reserve_analysis_credit", user_id, request_id)
     if remaining == -1:
         raise HTTPException(status_code=402, detail="No credits remaining. Please upgrade.")
     if not isinstance(remaining, int) or remaining < 0:
@@ -119,6 +124,6 @@ def complete_credit(user_id: str, request_id: str) -> None:
 
 
 def refund_credit(user_id: str, request_id: str) -> None:
-    refunded = _rpc("refund_analysis_credit", user_id, request_id)
+    refunded = _rpc("refund_analysis_credit_v2" if _ledger_v2() else "refund_analysis_credit", user_id, request_id)
     if refunded is not True:
         logger.warning("Credit transaction %s was not refunded (already finalized or missing)", request_id)
