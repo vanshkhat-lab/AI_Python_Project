@@ -26,13 +26,19 @@ def _enabled() -> bool:
     return os.getenv("RESUMEIQ_REFUNDS_ENABLED", "false").lower() == "true"
 
 
-def _guard() -> None:
-    if not _enabled() or not payments.ledger_v2_enabled():
-        raise HTTPException(503, "Refund processing is not enabled.")
+def _guard_backend() -> None:
+    if not payments.ledger_v2_enabled():
+        raise HTTPException(503, "Refund ledger is not enabled.")
     # Never mix real-money refunds into the staging/test environment.
     if payments.payment_mode() not in ("test", "live"):
         raise HTTPException(503, "Invalid payment mode.")
     payments._env()
+
+
+def _guard() -> None:
+    _guard_backend()
+    if not _enabled():
+        raise HTTPException(503, "New refund requests are disabled.")
 
 
 def _provider(path: str, body: dict | None = None, key: str | None = None) -> dict:
@@ -120,7 +126,7 @@ def request_pack_refund(user_id: str, order_id: str) -> dict:
 
 
 def reconcile_pack_refund(user_id: str, order_id: str) -> dict:
-    _guard()
+    _guard_backend()
     if not order_id.startswith("order_") or len(order_id) > 100:
         raise HTTPException(400, "Invalid order ID.")
     current = payments._supabase_rpc("get_resumeiq_pack_refund_v1", {
@@ -138,3 +144,27 @@ def reconcile_pack_refund(user_id: str, order_id: str) -> dict:
     refund = _provider(f"refunds/{quote(refund_id, safe='')}")
     state = _record_refund(refund, payment_id)
     return {"status": state, "refund_id": refund_id}
+
+
+def reconcile_provider_refund(refund_id: str) -> dict:
+    """Recheck an authenticated Razorpay refund webhook with Razorpay itself."""
+    _guard_backend()
+    if not isinstance(refund_id, str) or not refund_id.startswith("rfnd_") or len(refund_id) > 100:
+        raise HTTPException(400, "Invalid refund ID.")
+    result = _provider(f"refunds/{quote(refund_id, safe='')}")
+    payment_id = result.get("payment_id")
+    if not isinstance(payment_id, str) or not payment_id.startswith("pay_"):
+        raise HTTPException(502, "Invalid refund payment reference.")
+    state = _validate_refund(result, payment_id)
+    recorded = payments._supabase_rpc("record_resumeiq_pack_refund_v1", {
+        "p_payment_id": payment_id,
+        "p_refund_id": refund_id,
+        "p_status": state,
+        "p_amount_paise": AMOUNT,
+        "p_currency": CURRENCY,
+    })
+    if recorded == "unknown_payment":
+        return {"status": "ignored"}
+    if recorded not in (state, "already_" + state):
+        raise HTTPException(409, "Refund ledger conflict; manual review required.")
+    return {"status": state}
