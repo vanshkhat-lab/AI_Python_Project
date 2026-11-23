@@ -163,19 +163,23 @@ export async function refundLatestUnusedTestPack(): Promise<{
 }> {
   const { data: purchases, error } = await supabase
     .from("credit_purchases")
-    .select("razorpay_order_id")
+    .select("razorpay_order_id,status,credits_available")
     .eq("payment_mode", "test")
-    .eq("status", "paid")
-    .eq("credits_available", 5)
+    .in("status", ["paid", "refund_pending", "refunded"])
     .order("paid_at", { ascending: false })
-    .limit(1);
+    .limit(10);
 
-  if (error) throw new Error("Could not find an eligible test purchase.");
-  if (!purchases?.length) return { status: "not_found" };
-  const orderId = purchases[0].razorpay_order_id as string;
+  if (error) throw new Error("Could not look up the test purchase.");
+  const purchase = purchases?.find(
+    item => item.status === "refund_pending"
+      || (item.status === "paid" && item.credits_available === 5)
+  ) ?? purchases?.find(item => item.status === "refunded");
+  if (!purchase) return { status: "not_found" };
+  const orderId = purchase.razorpay_order_id as string;
+  const path = `/payments/refunds/${encodeURIComponent(orderId)}`;
   const result = await request<{
     status: string; refund_id?: string | null; reason?: string
-  }>(`/payments/refunds/${encodeURIComponent(orderId)}`, { method: "POST" });
+  }>(path, { method: purchase.status === "paid" ? "POST" : "GET" });
   window.dispatchEvent(new Event("resumeiq:credits-changed"));
   return result;
 }
