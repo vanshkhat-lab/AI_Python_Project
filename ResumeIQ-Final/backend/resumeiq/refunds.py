@@ -67,13 +67,17 @@ def _provider(path: str, body: dict | None = None, key: str | None = None) -> di
 def _validate_refund(refund: dict, payment_id: str) -> str:
     refund_id = refund.get("id")
     state = refund.get("status")
+    # Provider refund records can initially be 'created'. Treat them as pending.
+    normalized_state = "pending" if state == "created" else state
+    currency = refund.get("currency")
+    # Razorpay's refund examples can return an empty currency even for INR payments.
     if (not isinstance(refund_id, str) or not refund_id.startswith("rfnd_")
         or refund.get("payment_id") != payment_id
         or refund.get("amount") != AMOUNT
-        or refund.get("currency") != CURRENCY
-        or state not in ("pending", "processed", "failed")):
+        or currency not in (None, "", CURRENCY)
+        or normalized_state not in ("pending", "processed", "failed")):
         raise HTTPException(502, "Unexpected refund response. Manual reconciliation required.")
-    return state
+    return normalized_state
 
 
 def _record_refund(refund: dict, payment_id: str) -> str:
