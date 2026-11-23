@@ -249,6 +249,14 @@ def confirm_webhook(raw: bytes, signature: str) -> dict:
         data = json.loads(raw)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="Invalid webhook payload.") from exc
+    if data.get("event") in ("refund.created", "refund.processed", "refund.failed"):
+        refund_entity = data.get("payload", {}).get("refund", {}).get("entity", {})
+        refund_id = refund_entity.get("id") if isinstance(refund_entity, dict) else None
+        if not isinstance(refund_id, str) or not refund_id.startswith("rfnd_"):
+            raise HTTPException(status_code=400, detail="Webhook refund identifier missing.")
+        # Lazy import avoids a circular import with the refund module.
+        from backend.resumeiq.refunds import reconcile_provider_refund
+        return reconcile_provider_refund(refund_id)
     if data.get("event") != "payment.captured":
         return {"status": "ignored"}
     payment = data.get("payload", {}).get("payment", {}).get("entity", {})
