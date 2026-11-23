@@ -33,6 +33,10 @@ def payment_mode() -> str:
     return mode
 
 
+def ledger_v2_enabled() -> bool:
+    return os.getenv("RESUMEIQ_LEDGER_V2_ENABLED", "").strip().lower() == "true"
+
+
 def _env() -> tuple[str, str, str, str, str]:
     mode = payment_mode()
     key_id = os.getenv("RAZORPAY_KEY_ID", "").strip()
@@ -43,6 +47,8 @@ def _env() -> tuple[str, str, str, str, str]:
     expected_prefix = "rzp_live_" if mode == "live" else "rzp_test_"
     if mode == "live" and os.getenv("RAZORPAY_LIVE_ENABLED", "").lower() != "true":
         raise HTTPException(status_code=503, detail="Live checkout is not enabled for this service.")
+    if mode == "live" and not ledger_v2_enabled():
+        raise HTTPException(status_code=503, detail="Purchase-level credit accounting is required for live checkout.")
     if not (
         key_id.startswith(expected_prefix)
         and key_secret
@@ -149,15 +155,19 @@ def create_order(user_id: str) -> dict:
     ):
         raise HTTPException(status_code=502, detail="Unexpected Razorpay order response.")
 
+    order_details = {
+        "p_user_id": user_id,
+        "p_order_id": order_id,
+        "p_amount_paise": PACK_AMOUNT_PAISE,
+        "p_currency": PACK_CURRENCY,
+        "p_credits": PACK_CREDITS,
+    }
+    if ledger_v2_enabled():
+        order_details["p_payment_mode"] = payment_mode()
     recorded = _supabase_rpc(
-        "register_resumeiq_credit_order",
-        {
-            "p_user_id": user_id,
-            "p_order_id": order_id,
-            "p_amount_paise": PACK_AMOUNT_PAISE,
-            "p_currency": PACK_CURRENCY,
-            "p_credits": PACK_CREDITS,
-        },
+        "register_resumeiq_credit_order_v2" if ledger_v2_enabled()
+        else "register_resumeiq_credit_order",
+        order_details,
     )
     if recorded is not True:
         raise HTTPException(status_code=502, detail="Could not register payment order.")
@@ -200,9 +210,13 @@ def _grant_captured(order_id: str, payment_id: str, user_id: str | None = None) 
     ):
         raise HTTPException(status_code=409, detail="Invalid order package.")
     _verified_capture(order_id, payment_id)
+    payment_details = {"p_order_id": order_id, "p_payment_id": payment_id}
+    if ledger_v2_enabled():
+        payment_details["p_payment_mode"] = payment_mode()
     state = _supabase_rpc(
-        "apply_resumeiq_credit_payment",
-        {"p_order_id": order_id, "p_payment_id": payment_id},
+        "apply_resumeiq_credit_payment_v2" if ledger_v2_enabled()
+        else "apply_resumeiq_credit_payment",
+        payment_details,
     )
     if state not in ("credited", "already_credited"):
         raise HTTPException(status_code=409, detail="Order and payment do not match.")
