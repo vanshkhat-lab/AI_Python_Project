@@ -193,6 +193,12 @@ export default function CreditCheckout() {
         </button>
       )}
       {notice && <p role="status" style={{ marginBottom: 0 }}>{notice}</p>}
+      {configuration?.mode === "live" && configuration.enabled && (
+        <p style={{ color: "#5d726b", fontSize: 12, margin: "10px 0 0" }}>
+          * If your credits don&apos;t appear after payment, click &quot;Check purchase status&quot; (if shown)
+          or refresh the page. Please don&apos;t pay again.
+        </p>
+      )}
     </section>
   );
 }
