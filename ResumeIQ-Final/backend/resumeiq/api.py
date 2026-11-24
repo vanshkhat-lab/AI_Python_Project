@@ -39,6 +39,7 @@ from backend.resumeiq.payments import (
     purchase_status,
     checkout_config,
 )
+from backend.resumeiq.refunds import request_pack_refund, reconcile_pack_refund
 from backend.resumeiq.schemas import (
     AnalysisReport,
     ErrorDetail,
@@ -443,6 +444,16 @@ def credit_payment_status(
     order_id: str, user_id: str = Depends(current_user_id)
 ) -> dict[str, Any]:
     return purchase_status(user_id, order_id)
+
+
+@router.post("/payments/refunds/{order_id}")
+def request_refund(order_id: str, user_id: str = Depends(current_user_id)) -> dict[str, Any]:
+    return request_pack_refund(user_id, order_id)
+
+
+@router.get("/payments/refunds/{order_id}")
+def refund_status(order_id: str, user_id: str = Depends(current_user_id)) -> dict[str, Any]:
+    return reconcile_pack_refund(user_id, order_id)
 
 
 @router.post("/payments/webhook")
