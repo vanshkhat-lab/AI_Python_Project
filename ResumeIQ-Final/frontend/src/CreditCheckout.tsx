@@ -162,11 +162,6 @@ export default function CreditCheckout() {
           TEST MODE: This checkout does not collect real payments.
         </p>
       )}
-      {configuration?.mode === "live" && configuration.enabled && (
-        <p style={{ color: "#225c41", fontWeight: 600 }}>
-          LIVE CHECKOUT: ₹99 is a real payment for five analysis credits.
-        </p>
-      )}
       {!configuration?.enabled && (
         <p style={{ color: "#965014" }}>
           Checkout is unavailable until the payment service is configured.
