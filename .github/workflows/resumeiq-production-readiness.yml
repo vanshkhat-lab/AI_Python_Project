@@ -1,0 +1,64 @@
+name: ResumeIQ production readiness (safe checks)
+on:
+  push:
+    branches: [qa/production-readiness]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-unit-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ResumeIQ-Final
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install backend dependencies
+        run: python -m pip install -r backend/requirements.txt
+      - name: Run backend automated tests (mocked gateways, no payments)
+        run: python -m pytest backend/tests -q
+
+  production-public-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify production API health and payment safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import time
+          from urllib.request import urlopen
+          from urllib.error import URLError
+          base = "https://resumeiq-backend-2ukb.onrender.com"
+          for path in ("/api/health", "/api/payments/config"):
+              last_error = None
+              for attempt in range(4):
+                  try:
+                      with urlopen(base + path, timeout=25) as r:
+                          if r.status != 200:
+                              raise RuntimeError(f"{path}: HTTP {r.status}")
+                          result = json.loads(r.read(4096))
+                      break
+                  except Exception as exc:
+                      last_error = f"{type(exc).__name__}: {exc}"
+                      time.sleep(8)
+              else:
+                  raise RuntimeError(f"{path}: endpoint unreachable: {last_error}")
+              if path.endswith("/health"):
+                  assert result.get("status") == "ok", "API health is not OK"
+                  print("PASS: production health endpoint")
+              else:
+                  assert result.get("mode") in ("test", "live"), "Invalid payment mode"
+                  assert result.get("enabled") is False, (
+                      "SAFETY STOP: production checkout is enabled before launch approval"
+                  )
+                  print("PASS: production checkout gated off; mode:", result["mode"])
+          PY
