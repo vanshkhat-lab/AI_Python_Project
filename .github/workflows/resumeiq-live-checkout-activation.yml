@@ -1,0 +1,36 @@
+name: ResumeIQ live checkout activation smoke check
+on:
+  push:
+    branches: [qa/live-checkout-activation]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  validate-live-checkout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check production health and enabled Razorpay live mode
+        run: |
+          python - <<'PY'
+          import json,time
+          from urllib.request import urlopen
+          base="https://resumeiq-backend-2ukb.onrender.com"
+          for path in ("/api/health","/api/payments/config"):
+              for attempt in range(5):
+                  try:
+                      with urlopen(base+path,timeout=25) as response:
+                          assert response.status == 200
+                          data=json.load(response)
+                      break
+                  except Exception:
+                      if attempt == 4: raise
+                      time.sleep(10)
+              if path.endswith("health"):
+                  assert data.get("status")=="ok", "Production API health failed"
+                  print("PASS: production API healthy")
+              else:
+                  assert data.get("mode")=="live", "Production Razorpay is not in live mode"
+                  assert data.get("enabled") is True, "Production live checkout is not enabled"
+                  print("PASS: production Razorpay live checkout enabled")
+          PY
