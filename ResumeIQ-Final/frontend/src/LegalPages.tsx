@@ -226,11 +226,6 @@ function Terms() {
 function RefundPolicy() {
   return (
     <>
-      <p>
-        This policy applies to one-time ₹99 credit-pack purchases made through ResumeIQ
-        when paid checkout is available. Test-mode transactions do not transfer real money.
-      </p>
-
       <h2>1. Credit pack and delivery</h2>
       <p>
         A ₹99 purchase provides five additional resume-analysis credits to the purchaser's
