@@ -5,9 +5,9 @@ import "./legal.css";
 export type LegalPageKind = "privacy" | "terms" | "refunds" | "contact" | "about" | "delivery";
 
 const SUPPORT_EMAIL = (import.meta.env.VITE_SUPPORT_EMAIL || "ronicris1234@gmail.com").trim();
-const BUSINESS_ADDRESS = (import.meta.env.VITE_BUSINESS_ADDRESS ?? "").trim();
+const BUSINESS_ADDRESS = "Mohali, Punjab, India";
 const SUPPORT_PHONE = (import.meta.env.VITE_SUPPORT_PHONE ?? "").trim();
-const LAST_REVIEWED = "21 November 2026";
+const LAST_REVIEWED = "24 November 2026";
 
 const paths: Record<LegalPageKind, string> = {
   privacy: "/privacy-policy",
@@ -63,8 +63,8 @@ function ContactDetails() {
         )}
       </div>
       <div className="ri-contact-item">
-        <strong>Business / operating address</strong>
-        <p>{BUSINESS_ADDRESS || "To be supplied before public commercial launch."}</p>
+        <strong>Public business location</strong>
+        <p>{BUSINESS_ADDRESS}</p>
       </div>
       {SUPPORT_PHONE && (
         <div className="ri-contact-item">
@@ -80,9 +80,8 @@ function PrivacyPolicy() {
   return (
     <>
       <p>
-        This draft describes how ResumeIQ handles personal information when users access the resume
-        analysis service. It must be reviewed against the production configuration and final
-        business details before publication as a live policy.
+        This policy explains how ResumeIQ handles information when you use our
+        resume-analysis service.
       </p>
 
       <h2>1. Information handled by ResumeIQ</h2>
@@ -112,8 +111,8 @@ function PrivacyPolicy() {
       </p>
       <p>
         Please avoid including unnecessary sensitive personal information in resumes or job
-        descriptions. Data retention, backups and deletion procedures must be verified before
-        we make promises about automatic deletion.
+        descriptions. We do not promise automatic deletion of all provider logs or backups;
+        information may be retained for operational, security or payment-record purposes.
       </p>
 
       <h2>4. Providers and optional AI features</h2>
@@ -122,36 +121,35 @@ function PrivacyPolicy() {
         and credit records, and Razorpay for checkout and payment processing. If optional
         AI-generated wording suggestions are enabled and explicitly requested, resume excerpts
         and relevant analysis findings may be processed by an external AI provider. Those
-        optional features should be separately explained in the interface before launch.
+        optional features are used only when available and requested through the application.
       </p>
       <p>
         Razorpay handles payment entry. ResumeIQ records payment references and status rather
         than collecting full card numbers or CVVs through its own forms. Provider infrastructure
-        may process data in different locations; exact processing locations and transfer
-        arrangements should be confirmed before live release.
+        may process information in different locations under its own policies.
       </p>
 
       <h2>5. Feedback visibility</h2>
       <p>
         Feedback submitted through the current customer-feedback feature is displayed to other
         visitors of the application. Do not include your email, phone number, resume details,
-        banking information, or other private information in public feedback. Use the dedicated
-        support contact for private questions once it has been published.
+        banking information, or other private information in public feedback. Use our support
+        email for private questions.
       </p>
 
       <h2>6. Choices, corrections and requests</h2>
       <p>
         You can update certain information through your account provider and clear browser
-        session history on your device. A documented process for account deletion, data requests,
-        and retention periods is still being finalized. Contact information for such requests
-        must be published before accepting live customers.
+        session history on your device. To request information access, correction or deletion,
+        contact our support email. Some records may need to be retained for security,
+        payment or other legitimate purposes.
       </p>
 
       <h2>7. Security and updates</h2>
       <p>
         ResumeIQ uses authenticated API requests and database access controls for credits and
-        purchases. No online service can promise absolute security. This draft may change as
-        the product, providers, and applicable requirements evolve.
+        purchases. No online service can promise absolute security. We may update this
+        policy as the product, providers, and applicable requirements evolve.
       </p>
     </>
   );
@@ -161,8 +159,8 @@ function Terms() {
   return (
     <>
       <p>
-        These draft Terms describe the intended rules for using ResumeIQ. They must be finalized
-        with the verified legal operator details and reviewed before live commercial use.
+        These Terms describe the rules for using ResumeIQ, including one-time credit packs
+        when paid checkout is available.
       </p>
       <h2>1. What ResumeIQ provides</h2>
       <p>
@@ -186,16 +184,14 @@ function Terms() {
       </p>
       <h2>4. Free and paid credits</h2>
       <p>
-        The current plan offers two introductory analysis credits to eligible new accounts.
-        Each completed analysis consumes one credit. The proposed paid pack adds five analysis
-        credits for a one-time ₹99 purchase. There is no recurring subscription in this
-        version. Live purchases are not enabled yet; Razorpay Test Mode payments do not involve
-        actual funds.
+        Eligible new accounts receive two introductory analysis credits. Each completed
+        analysis consumes one credit. When paid checkout is enabled, a one-time ₹99 purchase
+        adds five analysis credits. This is not a recurring subscription.
       </p>
       <p>
-        Credits are intended for use within the account that received them. Do not attempt to
-        manipulate balances, abuse introductory offers, or bypass backend restrictions.
-        The final expiration, transfer and withdrawal rules must be set before live sales.
+        Credits are tied to the account that receives them. Do not attempt to manipulate
+        balances, abuse introductory offers, or bypass backend restrictions. Refunds for
+        unused purchased packs are governed by the refund policy.
       </p>
       <h2>5. Acceptable use</h2>
       <p>
@@ -212,19 +208,16 @@ function Terms() {
       </p>
       <h2>7. Payments, cancellations and refunds</h2>
       <p>
-        When live payments become available, eligible purchases will be processed by Razorpay.
-        The applicable refund and cancellation rules will be disclosed in the
-        {" "}<a href={paths.refunds}>Refund & Cancellation Policy</a>{" "}
-        before purchase. Statutory consumer rights are not excluded.
+        When paid checkout is available, purchases are processed through Razorpay.
+        The applicable rules are described in our{" "}
+        <a href={paths.refunds}>Refund & Cancellation Policy</a>.
+        Statutory consumer rights are not excluded.
       </p>
       <h2>8. Legal operator and contact</h2>
       <p>
-        ResumeIQ is being prepared as an independently operated individual or
-        sole-proprietor business in India, not a company or LLP. The verified
-        legal operator's name, merchant category, business contact address and
-        final jurisdictional terms must be added before these Terms are used
-        for live customers. Customer support:{" "}
-        <a href="mailto:ronicris1234@gmail.com">ronicris1234@gmail.com</a>.
+        ResumeIQ is operated by Vansh Khatri (Individual). Public business location:
+        {" "}{BUSINESS_ADDRESS}. Customer support:{" "}
+        <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
       </p>
     </>
   );
@@ -234,10 +227,8 @@ function RefundPolicy() {
   return (
     <>
       <p>
-        <strong>No real payments are currently accepted.</strong> ResumeIQ's ₹99 checkout
-        operates in Razorpay Test Mode. The following refund policy has been approved by the
-        ResumeIQ owner for future live credit-pack sales, subject to final legal and operational
-        review before live payments are enabled.
+        This policy applies to one-time ₹99 credit-pack purchases made through ResumeIQ
+        when paid checkout is available. Test-mode transactions do not transfer real money.
       </p>
 
       <h2>1. Credit pack and delivery</h2>
@@ -291,10 +282,10 @@ function RefundPolicy() {
         Bank or payment-provider processing times may vary.
       </p>
 
-      <h2>7. Razorpay Test Mode</h2>
+      <h2>7. Refund processing times</h2>
       <p>
-        Razorpay Test Mode transactions do not transfer real money and therefore do not
-        involve real-money refunds. Test credits are used only for product evaluation.
+        Approved refunds are initiated to the original payment method. The time for funds
+        to appear depends on the payment provider and your bank or payment method.
       </p>
 
       <h2>8. Consumer rights</h2>
@@ -310,8 +301,8 @@ function Contact() {
   return (
     <>
       <p>
-        Need help with your account, missing credits, or a payment issue? This page will hold
-        ResumeIQ's verified business support details before real payments go live.
+        Need help with your account, missing credits, or a payment issue? Contact the
+        ResumeIQ support team using the details below.
       </p>
       <ContactDetails />
       <h2>When contacting support</h2>
@@ -328,8 +319,8 @@ function Contact() {
       <h2>Service information</h2>
       <p>
         ResumeIQ provides resume-to-job matching and recommendations through a web
-        application. Live checkout is currently disabled, and all payment testing uses
-        Razorpay Test Mode.
+        application. The option to purchase credits is available only when checkout
+        is enabled in the application.
       </p>
     </>
   );
@@ -351,9 +342,8 @@ function About() {
       <h2>How the service works</h2>
       <p>
         After creating an account, eligible users start with two introductory analysis
-        credits. Each completed analysis consumes a credit. The current test-stage
-        checkout demonstrates a one-time ₹99 pack containing five additional credits.
-        No real-money payments are accepted while Razorpay Test Mode is enabled.
+        credits. Each completed analysis consumes one credit. When checkout is enabled,
+        a one-time ₹99 purchase provides five additional credits.
       </p>
       <h2>What ResumeIQ does not promise</h2>
       <p>
@@ -363,11 +353,8 @@ function About() {
       </p>
       <h2>Business details</h2>
       <p>
-        ResumeIQ is being prepared for commercial operation in India as an
-        independently operated individual or sole-proprietor business, not as a
-        registered company or LLP. The exact merchant classification, verified
-        operator name and business contact address will be finalized during
-        payment-provider onboarding and disclosed before accepting live payments.
+        ResumeIQ is operated by Vansh Khatri (Individual). Public business location:
+        {" "}{BUSINESS_ADDRESS}. For support enquiries, see the Contact Us page.
       </p>
       <h2>Support</h2>
       <p>
@@ -388,8 +375,8 @@ function Delivery() {
       <h2>Digital delivery of credits</h2>
       <p>
         After a successful payment has been verified by our backend, the purchased
-        credits are added to the customer's signed-in ResumeIQ account. The current
-        proposed pack provides five analysis credits for ₹99 as a one-time purchase.
+        credits are added to the customer's signed-in ResumeIQ account. The
+        one-time ₹99 credit pack provides five analysis credits.
       </p>
       <h2>When will credits appear?</h2>
       <p>
@@ -413,10 +400,10 @@ function Delivery() {
         eligibility is governed by the{" "}
         <a href={paths.refunds}>Refund & Cancellation Policy</a>.
       </p>
-      <h2>Current test-stage checkout</h2>
+      <h2>Payment confirmation</h2>
       <p>
-        Razorpay Test Mode does not collect real money. The current purchase
-        flow and delivery of test credits are available for testing only.
+        Credits are granted only after a payment is confirmed. If a payment is incomplete,
+        credits will not be added. You can check purchase status or contact support.
       </p>
     </>
   );
@@ -449,12 +436,7 @@ export default function LegalPage({ kind }: { kind: LegalPageKind }) {
         <div className="ri-legal-heading">
           <span className="ri-legal-kicker">RESUMEIQ · INFORMATION & SUPPORT</span>
           <h1>{labels[kind]}</h1>
-          <p>Draft prepared {LAST_REVIEWED}</p>
-        </div>
-        <div className="ri-legal-alert" role="note">
-          <strong>Pre-launch draft — review required.</strong> These pages describe the current
-          test-stage product and proposed terms. Contact details and the final policies must
-          be approved before accepting real customer payments.
+          <p>Last updated: {LAST_REVIEWED}</p>
         </div>
         <article className="ri-legal-article">
           <PageContent />
@@ -466,7 +448,7 @@ export default function LegalPage({ kind }: { kind: LegalPageKind }) {
         </aside>
       </main>
       <footer className="ri-legal-footer">
-        <p>© {new Date().getFullYear()} ResumeIQ · Test-stage service</p>
+        <p>© {new Date().getFullYear()} ResumeIQ · Operated by Vansh Khatri</p>
         <LegalLinks className="ri-legal-links" />
       </footer>
     </div>
