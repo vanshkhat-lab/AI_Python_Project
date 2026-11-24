@@ -6,6 +6,7 @@ import {
   getPaymentConfiguration,
 } from "./api";
 import type { PaymentConfiguration } from "./api";
+import { recoverCheckoutOrder } from "./paymentRecovery";
 
 type CheckoutResult = {
   razorpay_order_id: string;
@@ -107,11 +108,26 @@ export default function CreditCheckout() {
           void (async () => {
             try {
               setBusy(true);
-              const result = await verifyCreditPayment(payment);
+              // Always use the original order ID returned by our backend.
+              // Razorpay's callback fields alone are not authoritative.
+              const result = await verifyCreditPayment({
+                razorpay_order_id: order.order_id,
+                razorpay_payment_id: payment.razorpay_payment_id,
+                razorpay_signature: payment.razorpay_signature,
+              });
               setNotice(`Payment verified. ${result.credits_added} credits added to your account.`);
               setPendingOrderId("");
-            } catch (error) {
-              setNotice(error instanceof Error ? error.message : "Payment verification pending. Try Check purchase status.");
+            } catch {
+              // The signed callback may fail or be delayed even when Razorpay's
+              // independently signed webhook has already credited this order.
+              // Recover via the authenticated, owner-scoped server endpoint.
+              const recovered = await recoverCheckoutOrder(order.order_id, checkCreditPayment);
+              if (recovered) {
+                setNotice("Purchase confirmed. Your credit balance has been refreshed.");
+                setPendingOrderId("");
+              } else {
+                setNotice("Payment confirmation is pending. Please do not pay again. Use Check purchase status in a moment.");
+              }
             } finally {
               setBusy(false);
             }
